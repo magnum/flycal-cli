@@ -19,9 +19,9 @@ Gem::Specification.new do |spec|
   spec.metadata["changelog_uri"] = "https://github.com/your-username/flycal-cli/blob/main/CHANGELOG.md"
 
   spec.files = Dir.chdir(__dir__) do
-    Dir["{lib,exe}/**/*", "LICENSE", "README.md"].select { |f| File.file?(f) }
+    Dir["{lib,bin}/**/*", "LICENSE", "README.md"].select { |f| File.file?(f) }
   end
-  spec.bindir = "exe"
+  spec.bindir = "bin"
   spec.executables = ["flycal"]
   spec.require_paths = ["lib"]
 
