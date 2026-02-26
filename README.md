@@ -101,6 +101,8 @@ The summary shows:
 - Number of events found
 - Total time occupied (hours, minutes, and working days based on 8-hour days)
 
+For time frames longer than 7 days, a weekly breakdown is added (week number, start/end dates, hours, working days per week). For time frames longer than 30 days, a monthly breakdown is shown instead (month number, month name, hours, working days per month).
+
 ## Configuration
 
 Data is stored in `~/.flycal/`:

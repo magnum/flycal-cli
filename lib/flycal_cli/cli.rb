@@ -3,6 +3,9 @@
 require "thor"
 require "time"
 require "date"
+require "active_support/core_ext/date"
+require "active_support/core_ext/integer"
+require "active_support/core_ext/time"
 require "tty-prompt"
 require "tty-spinner"
 
@@ -130,10 +133,10 @@ module FlycalCli
       time_min = options[:from].to_s.empty? ? Date.today.to_time : parse_datetime(options[:from])
       begin
         time_max = if options[:in].to_s.empty?
-          options[:to].to_s.empty? ? (Date.today + 30).to_time + 86400 - 1 : parse_datetime(options[:to], end_of_day: true)
-        else
-          parse_duration_in(options[:in], time_min)
-        end
+                     options[:to].to_s.empty? ? (Date.today + 30).to_time + 86400 - 1 : parse_datetime(options[:to], end_of_day: true)
+                   else
+                     parse_duration_in(options[:in], time_min)
+                   end
       rescue FlycalCli::Error => e
         puts "Error: #{e.message}"
         exit 1
@@ -161,12 +164,18 @@ module FlycalCli
       )
 
       print_events(service, events)
-      print_summary(events, time_min: time_min, time_max: time_max)
+      print_search_summary(events, time_min: time_min, time_max: time_max)
     end
 
     default_task :help
 
     private
+
+    HOURS_PER_WORKING_DAY = 8
+
+    def bold(str)
+      "\e[1m#{str}\e[0m"
+    end
 
     def parse_datetime(str, end_of_day: false)
       return nil if str.nil? || str.empty?
@@ -255,36 +264,112 @@ module FlycalCli
       if dt.is_a?(String)
         dt
       else
-        dt.strftime("%Y-%m-%d %H:%M")
+        dt.strftime("%a %Y-%m-%d %H:%M")
       end
     end
 
-    def print_summary(events, time_min:, time_max:)
-      total_minutes = 0
+    def format_date_with_day(dt)
+      return "-" if dt.nil?
 
-      events.each do |item|
-        event = item[:event]
-        start = event.start&.date_time || event.start&.date
-        end_dt = event.end&.date_time || event.end&.date
+      t = dt.respond_to?(:to_time) ? dt.to_time : dt
+      t.strftime("%a %Y-%m-%d")
+    end
 
-        next if start.nil? || end_dt.nil?
+    def print_search_summary(events, time_min:, time_max:)
+      event_ranges = extract_event_ranges(events)
+      total_minutes = event_ranges.sum { |s, e| (e - s) / 60 }
 
-        start = start.to_time if start.respond_to?(:to_time)
-        end_dt = end_dt.to_time if end_dt.respond_to?(:to_time)
-        total_minutes += (end_dt - start) / 60
-      end
-
-      hours = (total_minutes / 60).floor
-      mins = (total_minutes % 60).round
-      total_working_days = (total_minutes / 60.0 / 8).round(1)
-
-      from_str = time_min.strftime("%Y-%m-%d %H:%M")
-      to_str = time_max.strftime("%Y-%m-%d %H:%M")
+      from_str = time_min.strftime("%a %Y-%m-%d %H:%M")
+      to_str = time_max.strftime("%a %Y-%m-%d %H:%M")
 
       puts "\n---"
       puts "From: #{from_str} | To: #{to_str}"
       puts "Events found: #{events.size}"
-      puts "Total time occupied: #{hours}h #{mins}min (#{total_working_days} working days)"
+      puts "Total time occupied: #{format_duration(total_minutes)}"
+
+      frame_days = (time_max - time_min) / 86400.0
+      if frame_days > 30
+        print_monthly_breakdown(event_ranges, time_min, time_max)
+      elsif frame_days > 7
+        print_weekly_breakdown(event_ranges, time_min, time_max)
+      end
+    end
+
+    def extract_event_ranges(events)
+      events.filter_map do |item|
+        event = item[:event]
+        start_t = event.start&.date_time || event.start&.date
+        end_t = event.end&.date_time || event.end&.date
+        next if start_t.nil? || end_t.nil?
+
+        start_t = start_t.to_time if start_t.respond_to?(:to_time)
+        end_t = end_t.to_time if end_t.respond_to?(:to_time)
+        [start_t, end_t]
+      end
+    end
+
+    def format_duration(total_minutes)
+      hours = (total_minutes / 60).floor
+      mins = (total_minutes % 60).round
+      working_days = (total_minutes / 60.0 / HOURS_PER_WORKING_DAY).round(1)
+      "#{bold(hours)}h #{bold(mins)}min (#{bold(working_days)} working days)"
+    end
+
+    def format_hours_and_days(hours, working_days)
+      "#{bold(hours)}h (#{bold(working_days)} working days)"
+    end
+
+    def minutes_in_period(event_ranges, period_start, period_end)
+      event_ranges.sum do |ev_start, ev_end|
+        overlap_start = [ev_start, period_start].max
+        overlap_end = [ev_end, period_end].min
+        overlap_sec = overlap_end - overlap_start
+        overlap_sec > 0 ? overlap_sec / 60.0 : 0
+      end
+    end
+
+    def print_weekly_breakdown(event_ranges, time_min, time_max)
+      puts "\nBy week:"
+      week_num = 1
+      current = time_min.to_date.beginning_of_week(:monday)
+      while current.to_time < time_max
+        week_start = [current.to_time, time_min].max
+        week_end_date = current.end_of_week(:monday)
+        week_end = [week_end_date.to_time + 1.day, time_max].min
+        mins = minutes_in_period(event_ranges, week_start, week_end)
+        hours = (mins / 60).round(1)
+        working_days = (mins / 60.0 / HOURS_PER_WORKING_DAY).round(1)
+        start_str = format_date_with_day(week_start)
+        end_str = format_date_with_day(week_end_date)
+        puts "  #{bold(week_num)}. #{start_str} - #{end_str}: #{format_hours_and_days(hours, working_days)}"
+        week_num += 1
+        current = current + 7.days
+      end
+    end
+
+    def print_monthly_breakdown(event_ranges, time_min, time_max)
+      puts "\nBy month:"
+      month_num = 1
+      current = time_min.to_date.beginning_of_month
+      end_date = time_max.to_date
+
+      while current <= end_date
+        month_start = current.beginning_of_month.to_time
+        month_end = (current.end_of_month + 1.day).to_time
+        period_start = [month_start, time_min].max
+        period_end = [month_end, time_max].min
+
+        mins = minutes_in_period(event_ranges, period_start, period_end)
+        hours = (mins / 60).round(1)
+        working_days = (mins / 60.0 / HOURS_PER_WORKING_DAY).round(1)
+        month_name = current.strftime("%B %Y")
+        start_str = format_date_with_day(period_start)
+        last_day = (period_end.to_date - 1.day)
+        end_str = format_date_with_day(last_day)
+        puts "  #{month_num}. #{month_name} (#{start_str} - #{end_str}): #{format_hours_and_days(hours, working_days)}"
+        month_num += 1
+        current = current.next_month.beginning_of_month
+      end
     end
   end
 end
