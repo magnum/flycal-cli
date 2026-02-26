@@ -80,13 +80,11 @@ flycal search -i 2months -d placeholder
 
 **Options:**
 
-| Option | Short | Description |
-|:-------|:-----:|-------------|
-| <code style="white-space:nowrap">--from</code> | <code style="white-space:nowrap">-f</code> | Start date/time. Default: midnight of current day. Format: <code>2025-01-01</code> or <code>2025-01-01T09:00</code> |
-| <code style="white-space:nowrap">--to</code> | <code style="white-space:nowrap">-t</code> | End date/time. Default: 23:59 of the 30th day from today. Format: same as <code>--from</code> |
-| <code style="white-space:nowrap">--in</code> | <code style="white-space:nowrap">-i</code> | Duration from <code>--from</code>, overrides <code>--to</code>. Format: <code>30days</code>, <code>48hours</code>, <code>2months</code>, <code>1year</code> (no space). With space use quotes: <code>--in "30 days"</code> |
-| <code style="white-space:nowrap">--calendar</code> | <code style="white-space:nowrap">-c</code> | Calendar name or ID. Default: calendar set via <code>flycal calendars</code> |
-| <code style="white-space:nowrap">--description</code> | <code style="white-space:nowrap">-d</code> | Filter events by text. Matches events where the string appears in title or description (case-insensitive, contains) |
+- `--from` / `-f` — Start date/time. Default: midnight of current day. Format: `2025-01-01` or `2025-01-01T09:00`
+- `--to` / `-t` — End date/time. Default: 23:59 of the 30th day from today. Format: same as `--from`
+- `--in` / `-i` — Duration from `--from`, overrides `--to`. Format: `30days`, `48hours`, `2months`, `1year` (no space). With space use quotes: `--in "30 days"`
+- `--calendar` / `-c` — Calendar name or ID. Default: calendar set via `flycal calendars`
+- `--description` / `-d` — Filter events by text. Matches events where the string appears in title or description (case-insensitive, contains)
 
 **Time range behavior:**
 
@@ -111,9 +109,9 @@ Data is stored in `~/.flycal/`:
 
 | File | Purpose |
 |:-----|---------|
-| <code style="white-space:nowrap">config.yml</code> | Default calendar ID and other settings |
-| <code style="white-space:nowrap">credentials.json</code> | OAuth credentials (created manually from Google Cloud Console) |
-| <code style="white-space:nowrap">tokens.yml</code> | Access tokens (managed automatically) |
+| `config.yml` | Default calendar ID and other settings |
+| `credentials.json` | OAuth credentials (created manually from Google Cloud Console) |
+| `tokens.yml` | Access tokens (managed automatically) |
 
 ## Publishing to RubyGems
 
