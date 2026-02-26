@@ -2,6 +2,7 @@
 
 require "thor"
 require "time"
+require "date"
 require "tty-prompt"
 require "tty-spinner"
 
@@ -13,70 +14,70 @@ module FlycalCli
       true
     end
 
-    desc "login", "Connetti al tuo account Google"
+    desc "login", "Connect to your Google account"
     def login
       if Auth.logged_in?
-        puts "✓ Sei già connesso al tuo account Google."
-        puts "\nEsegui 'flycal calendars' per impostare il calendario di default."
+        puts "✓ You are already connected to your Google account."
+        puts "\nRun 'flycal calendars' to set the default calendar."
         return
       end
 
       unless Config.credentials_exist?
-        puts "Errore: File credentials non trovato."
-        puts "\nPer configurare flycal:"
-        puts "1. Vai su https://console.cloud.google.com/apis/credentials"
-        puts "2. Crea credenziali 'Applicazione desktop' (Desktop app)"
-        puts "3. Scarica il JSON e salvalo come: #{Config.credentials_path}"
-        puts "\nAggiungi anche questo URI come redirect autorizzato:"
+        puts "Error: Credentials file not found."
+        puts "\nTo configure flycal:"
+        puts "1. Go to https://console.cloud.google.com/apis/credentials"
+        puts "2. Create 'Desktop app' credentials"
+        puts "3. Download the JSON and save it as: #{Config.credentials_path}"
+        puts "\nAlso add this URI as an authorized redirect:"
         puts "  http://127.0.0.1:9292/oauth2callback"
         return
       end
 
       begin
         Auth.login
-        puts "\n✓ Autenticazione completata con successo!"
-        puts "\nEsegui 'flycal calendars' per impostare il calendario di default."
+        puts "\n✓ Authentication completed successfully!"
+        puts "\nRun 'flycal calendars' to set the default calendar."
       rescue FlycalCli::Error => e
-        puts "Errore: #{e.message}"
+        puts "Error: #{e.message}"
         exit 1
       end
     end
 
-    desc "logout", "Disconnetti dall'account Google"
+    desc "logout", "Disconnect from Google account"
     def logout
       unless Auth.logged_in?
-        puts "Non sei connesso a nessun account Google."
+        puts "You are not connected to any Google account."
         return
       end
 
       Auth.logout
-      puts "✓ Disconnesso con successo."
+      puts "✓ Disconnected successfully."
     end
 
-    desc "calendars", "Mostra i calendari disponibili e imposta quello di default"
+    desc "calendars", "List available calendars and set the default one"
     def calendars
       unless Auth.logged_in?
-        puts "Non sei connesso. Esegui prima 'flycal login'."
+        puts "You are not connected. Run 'flycal login' first."
         exit 1
       end
 
       creds = Auth.credentials
       service = CalendarService.new(creds)
 
-      spinner = TTY::Spinner.new("Caricamento calendari... ", format: :dots)
+      spinner = TTY::Spinner.new("Loading calendars... ", format: :dots)
       spinner.auto_spin
       calendars = service.list_calendars
       spinner.stop("✓")
 
       if calendars.empty?
-        puts "Nessun calendario trovato."
+        puts "No calendars found."
         return
       end
 
-      # Costruisci lista per selezione (display => calendar_id)
+      # Build selection list (display => calendar_id)
       default_id = Config.calendar_default
       choices = calendars.to_h do |cal|
-        primary = cal.primary ? " (principale)" : ""
+        primary = cal.primary ? " (primary)" : ""
         default = (cal.id == default_id) ? " [default]" : ""
         summary = cal.summary || cal.id
         label = "#{summary}#{primary}#{default}"
@@ -85,7 +86,7 @@ module FlycalCli
 
       prompt = TTY::Prompt.new
       selected_id = prompt.select(
-        "Scegli il calendario di default:",
+        "Choose the default calendar:",
         choices,
         per_page: 15,
         filter: true
@@ -94,26 +95,52 @@ module FlycalCli
       calendar = calendars.find { |c| c.id == selected_id }
       if calendar
         Config.calendar_default = calendar.id
-        puts "\n✓ Calendario di default impostato: #{calendar.summary}"
+        puts "\n✓ Default calendar set to: #{calendar.summary}"
       end
     end
 
-    desc "search", "Cerca eventi nei calendari"
-    option :calendar, type: :string, aliases: "-c", desc: "Nome o ID del calendario (default: calendario default)"
-    option :from, type: :string, aliases: "-f", required: true, desc: "Data/ora inizio (es. 2025-01-01 o 2025-01-01T09:00)"
-    option :to, type: :string, aliases: "-t", required: true, desc: "Data/ora fine (es. 2025-01-31 o 2025-01-31T18:00)"
-    option :description, type: :string, aliases: "-d", desc: "Filtra per descrizione (testo)"
+    desc "search", "Search for events in calendars"
+    long_desc <<-LONGDESC
+      Search for events in your Google calendar(s).
+
+      Time range:
+        -f, --from DATE   Start (default: today midnight)
+        -t, --to DATE     End (default: 23:59 of day 30)
+        -i, --in DURATION Duration from --from, overrides --to.
+                          Format: 30days, 48hours, 2months, 1year (no space).
+                          With space use quotes: --in "30 days"
+
+      Examples:
+        flycal search
+        flycal search --in 30days -d meeting
+        flycal search -i 1months --description rappydrive
+        flycal search -f 2025-03-01 --in 2months
+    LONGDESC
+    option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"
+    option :from, type: :string, aliases: "-f", desc: "Start (default: today midnight)"
+    option :to, type: :string, aliases: "-t", desc: "End (default: 23:59 of day 30)"
+    option :in, type: :string, aliases: "-i", desc: "Duration: 30days, 48hours, 2months, 1year (overrides --to)"
+    option :description, type: :string, aliases: "-d", desc: "Filter by text in event"
     def search
       unless Auth.logged_in?
-        puts "Non sei connesso. Esegui prima 'flycal login'."
+        puts "You are not connected. Run 'flycal login' first."
         exit 1
       end
 
-      time_min = parse_datetime(options[:from])
-      time_max = parse_datetime(options[:to], end_of_day: true)
+      time_min = options[:from].to_s.empty? ? Date.today.to_time : parse_datetime(options[:from])
+      begin
+        time_max = if options[:in].to_s.empty?
+          options[:to].to_s.empty? ? (Date.today + 30).to_time + 86400 - 1 : parse_datetime(options[:to], end_of_day: true)
+        else
+          parse_duration_in(options[:in], time_min)
+        end
+      rescue FlycalCli::Error => e
+        puts "Error: #{e.message}"
+        exit 1
+      end
 
       if time_min > time_max
-        puts "Errore: la data 'from' deve essere prima della data 'to'."
+        puts "Error: 'from' date must be before 'to' date."
         exit 1
       end
 
@@ -122,7 +149,7 @@ module FlycalCli
 
       calendar_ids = resolve_calendar_ids(service, options[:calendar])
       if calendar_ids.empty?
-        puts "Nessun calendario trovato."
+        puts "No calendars found."
         exit 1
       end
 
@@ -134,7 +161,7 @@ module FlycalCli
       )
 
       print_events(service, events)
-      print_summary(events)
+      print_summary(events, time_min: time_min, time_max: time_max)
     end
 
     default_task :help
@@ -149,7 +176,29 @@ module FlycalCli
       else
         d = Date.parse(str)
         t = d.to_time
-        end_of_day ? t + 86400 - 1 : t  # 23:59:59 per --to quando è solo data
+        end_of_day ? t + 86400 - 1 : t  # 23:59:59 for --to when date-only
+      end
+    end
+
+    def parse_duration_in(str, from_time)
+      # Support both "30days" and "30 days" (no space avoids shell splitting)
+      m = str.to_s.strip.match(/\A(\d+)\s*(day|days|d|hour|hours|h|month|months|m|year|years|y)\z/i)
+      raise FlycalCli::Error, "Invalid --in format. Use: 30days, 48hours, 2months, 1year (no space, or quote: --in \"30 days\")" unless m
+
+      n = m[1].to_i
+      unit = m[2].downcase
+
+      case unit
+      when "hour", "hours", "h"
+        from_time + n * 3600
+      when "day", "days", "d"
+        from_time + n * 86400
+      when "month", "months", "m"
+        (from_time.to_date >> n).to_time + (from_time.hour * 3600 + from_time.min * 60 + from_time.sec)
+      when "year", "years", "y"
+        (from_time.to_date >> (n * 12)).to_time + (from_time.hour * 3600 + from_time.min * 60 + from_time.sec)
+      else
+        raise FlycalCli::Error, "Invalid unit: #{unit}. Use: days, hours, months, years"
       end
     end
 
@@ -161,15 +210,15 @@ module FlycalCli
         if default_id
           return [default_id]
         end
-        # Usa calendario principale se disponibile
+        # Use primary calendar if available
         primary = calendar_lists.find(&:primary)
         return [primary.id] if primary
-        # Altrimenti primo calendario
+        # Otherwise first calendar
         return [calendar_lists.first.id] if calendar_lists.any?
         return []
       end
 
-      # Cerca per nome o ID
+      # Search by name or ID
       matches = calendar_lists.select do |cal|
         cal.id == calendar_name ||
           (cal.summary && cal.summary.downcase.include?(calendar_name.downcase))
@@ -179,7 +228,7 @@ module FlycalCli
     end
 
     def print_events(service, events)
-      # Usa lista calendari per i nomi (evita chiamate API extra)
+      # Use calendar list for names (avoids extra API calls)
       calendar_list = service.list_calendars
       calendar_names = calendar_list.to_h { |c| [c.id, c.summary || c.id] }
 
@@ -193,7 +242,7 @@ module FlycalCli
 
         start_str = format_datetime(start_time)
         end_str = format_datetime(end_time)
-        desc = event.summary || "(senza titolo)"
+        desc = event.summary || "(no title)"
         desc = event.description&.slice(0, 80) if event.summary.nil? && event.description
 
         puts "#{cal_name} | #{start_str} | #{end_str} | #{desc}"
@@ -210,7 +259,7 @@ module FlycalCli
       end
     end
 
-    def print_summary(events)
+    def print_summary(events, time_min:, time_max:)
       total_minutes = 0
 
       events.each do |item|
@@ -227,10 +276,15 @@ module FlycalCli
 
       hours = (total_minutes / 60).floor
       mins = (total_minutes % 60).round
+      total_working_days = (total_minutes / 60.0 / 8).round(1)
+
+      from_str = time_min.strftime("%Y-%m-%d %H:%M")
+      to_str = time_max.strftime("%Y-%m-%d %H:%M")
 
       puts "\n---"
-      puts "Eventi trovati: #{events.size}"
-      puts "Tempo totale occupato: #{hours}h #{mins}min"
+      puts "From: #{from_str} | To: #{to_str}"
+      puts "Events found: #{events.size}"
+      puts "Total time occupied: #{hours}h #{mins}min (#{total_working_days} working days)"
     end
   end
 end

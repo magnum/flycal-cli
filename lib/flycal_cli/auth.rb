@@ -43,9 +43,9 @@ module FlycalCli
       def login
         unless Config.credentials_exist?
           raise FlycalCli::Error,
-                "File credentials non trovato. Crea #{Config.credentials_path} con le credenziali OAuth dal Google Cloud Console.\n" \
-                "Vai su: https://console.cloud.google.com/apis/credentials\n" \
-                "Crea credenziali 'Desktop app' e scarica il JSON come credentials.json"
+                "Credentials file not found. Create #{Config.credentials_path} with OAuth credentials from Google Cloud Console.\n" \
+                "Go to: https://console.cloud.google.com/apis/credentials\n" \
+                "Create 'Desktop app' credentials and download the JSON as credentials.json"
         end
 
         token_store = Google::Auth::Stores::FileTokenStore.new(file: Config.tokens_path)
@@ -63,9 +63,9 @@ module FlycalCli
           return creds
         end
 
-        # Avvia server locale per ricevere il codice
+        # Start local server to receive the auth code
         code = start_redirect_server(authorizer)
-        raise FlycalCli::Error, "Autenticazione annullata o fallita" if code.nil? || code.empty?
+        raise FlycalCli::Error, "Authentication cancelled or failed" if code.nil? || code.empty?
 
         authorizer.get_and_store_credentials_from_code(
           user_id: "flycal_user",
@@ -104,12 +104,12 @@ module FlycalCli
 
           if params["error"]
             res.status = 400
-            res.body = "<h1>Errore</h1><p>#{params['error']}: #{params['error_description']}</p>"
+            res.body = "<h1>Error</h1><p>#{params['error']}: #{params['error_description']}</p>"
             auth_code = nil
           elsif params["code"]
             auth_code = params["code"]
             res.status = 200
-            res.body = "<h1>Autenticazione completata!</h1><p>Puoi chiudere questa finestra e tornare al terminale.</p>"
+            res.body = "<h1>Authentication complete!</h1><p>You can close this window and return to the terminal.</p>"
           end
 
           Thread.new { server.shutdown }
@@ -120,9 +120,9 @@ module FlycalCli
           state: state
         )
 
-        puts "\nApri questo link nel browser per autenticarti:\n\n"
+        puts "\nOpen this link in your browser to authenticate:\n\n"
         puts "  #{url}\n\n"
-        puts "Dopo l'autenticazione, tornerai qui automaticamente.\n\n"
+        puts "After authentication, you will be redirected back here automatically.\n\n"
 
         server.start
         auth_code

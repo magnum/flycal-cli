@@ -45,12 +45,26 @@ module FlycalCli
     def list_all_events(calendar_ids, time_min:, time_max:, query: nil)
       all_events = []
 
+      # When --description is used: fetch all events and filter client-side to guarantee
+      # contains/like behavior. We do not use the API's q param so we can ensure we
+      # return all events where the string appears in summary or description (case-insensitive).
       calendar_ids.each do |cal_id|
         begin
-          events = list_events(cal_id, time_min: time_min, time_max: time_max, query: query)
+          events = list_events(cal_id, time_min: time_min, time_max: time_max, query: nil)
           events.each { |e| all_events << { calendar_id: cal_id, event: e } }
         rescue Google::Apis::Errors::Error => e
-          warn "Errore nel calendario #{cal_id}: #{e.message}"
+          warn "Error in calendar #{cal_id}: #{e.message}"
+        end
+      end
+
+      # Filter: only events where summary or description contains the search string (case-insensitive)
+      if query && !query.to_s.strip.empty?
+        q = query.strip.downcase
+        all_events.select! do |item|
+          event = item[:event]
+          summary = (event.summary || "").downcase
+          description = (event.description || "").downcase
+          summary.include?(q) || description.include?(q)
         end
       end
 
