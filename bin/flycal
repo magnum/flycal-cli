@@ -3,4 +3,9 @@
 
 require "flycal_cli"
 
+if ARGV.include?("--version") || ARGV.include?("-v")
+  puts "flycal #{FlycalCli::VERSION}"
+  exit 0
+end
+
 FlycalCli::Cli.start(ARGV)
