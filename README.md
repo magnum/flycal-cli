@@ -1,5 +1,7 @@
 # flycal-cli
 
+[![Gem Version](https://badge.fury.io/rb/flycal-cli.svg)](https://badge.fury.io/rb/flycal-cli) 
+
 A command-line tool to access and search Google Calendar events. Connect your Google account, choose a default calendar, and search events with flexible date ranges and text filters.
 
 ## Requirements
