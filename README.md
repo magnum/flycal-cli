@@ -1,139 +1,156 @@
 # flycal-cli
 
-CLI per accedere ai calendari Google da riga di comando.
+A command-line tool to access and search Google Calendar events. Connect your Google account, choose a default calendar, and search events with flexible date ranges and text filters.
 
-## Installazione
+## Requirements
+
+- Ruby 3.1 or later
+- A Google Cloud project with Calendar API enabled
+
+## Installation
 
 ```bash
 gem install flycal-cli
 ```
 
-Oppure aggiungi al tuo Gemfile:
+Or add to your Gemfile:
 
 ```ruby
 gem "flycal-cli"
 ```
 
-## Configurazione iniziale
+Then run `bundle install`.
 
-Prima di usare flycal, devi creare credenziali OAuth nel Google Cloud Console:
+## Setup
 
-1. Vai su [Google Cloud Console - Credenziali](https://console.cloud.google.com/apis/credentials)
-2. Crea un progetto (o usa uno esistente)
-3. Abilita l'**API Google Calendar** (API e servizi → Libreria → Cerca "Google Calendar API")
-4. Crea credenziali **Applicazione desktop** (OAuth 2.0 Client IDs)
-5. Aggiungi questo URI come redirect autorizzato:
+Before using flycal, you need OAuth credentials from Google Cloud Console:
+
+1. Go to [Google Cloud Console - Credentials](https://console.cloud.google.com/apis/credentials)
+2. Create a project or select an existing one
+3. Enable the **Google Calendar API** (APIs & Services → Library → search for "Google Calendar API")
+4. Create **Desktop app** credentials (OAuth 2.0 Client IDs)
+5. Add this URI as an authorized redirect:
    ```
    http://127.0.0.1:9292/oauth2callback
    ```
-6. Scarica il file JSON e salvalo come `~/.flycal/credentials.json`
+6. Download the JSON file and save it as `~/.flycal/credentials.json`
 
-## Comandi
+## Commands
 
-### `flycal login`
+### login
 
-Connetti al tuo account Google. Se non sei connesso, verrà generato un link da aprire nel browser per completare l'autenticazione OAuth.
+Connect to your Google account. Opens a browser for OAuth authentication when not yet connected.
 
 ```bash
 flycal login
 ```
 
-### `flycal calendars`
+If already connected, the command reports the current status and suggests running `flycal calendars` to set the default calendar.
 
-Mostra la lista dei calendari disponibili e permette di selezionare il calendario di default. La selezione è scorrevole (usa le frecce per navigare).
+### logout
 
-```bash
-flycal calendars
-```
-
-### `flycal logout`
-
-Disconnetti dall'account Google.
+Disconnect from your Google account and remove stored tokens.
 
 ```bash
 flycal logout
 ```
 
-### `flycal search`
+### calendars
 
-Cerca eventi nei calendari.
+List available calendars and set the default one. Uses an interactive scrollable menu (arrow keys to navigate, type to filter).
 
 ```bash
-flycal search --from 2025-02-01 --to 2025-02-28
-flycal search -f 2025-02-01 -t 2025-02-28 --description "riunione"
-flycal search -f 2025-02-01T09:00 -t 2025-02-28T18:00 -c "Lavoro"
+flycal calendars
 ```
 
-Opzioni:
-- `-f, --from`: Data/ora inizio (es. `2025-01-01` o `2025-01-01T09:00`)
-- `-t, --to`: Data/ora fine
-- `-c, --calendar`: Nome o ID del calendario (default: calendario impostato con `flycal calendars`)
-- `-d, --description`: Filtra eventi per testo nella descrizione
+The default calendar is used by the search command when no calendar is specified.
 
-## File di configurazione
+### search
 
-I dati vengono salvati in `~/.flycal/`:
-
-- `config.yml` - calendario di default (`calendar_default`)
-- `credentials.json` - credenziali OAuth (da creare manualmente)
-- `tokens.yml` - token di accesso (gestito automaticamente)
-
-## Pubblicazione su RubyGems
-
-### Primo caricamento
-
-1. Crea un account su [rubygems.org](https://rubygems.org) se non ce l'hai
-2. Aggiorna `flycal-cli.gemspec` con i tuoi dati (autori, email, homepage)
-3. Build e push:
+Search for events in your calendar(s). Supports flexible date ranges and text filtering.
 
 ```bash
-# Build della gem
-gem build flycal-cli.gemspec
+flycal search
+flycal search --in 30days --description meeting
+flycal search -f 2025-03-01 -t 2025-03-31 -c "Work"
+flycal search -i 2months -d rappydrive
+```
 
-# Push (ti chiederà email e password RubyGems)
+**Options:**
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--from` | `-f` | Start date/time. Default: midnight of current day. Format: `2025-01-01` or `2025-01-01T09:00` |
+| `--to` | `-t` | End date/time. Default: 23:59 of the 30th day from today. Format: same as `--from` |
+| `--in` | `-i` | Duration from `--from`, overrides `--to`. Format: `30days`, `48hours`, `2months`, `1year` (no space between number and unit). With space, use quotes: `--in "30 days"` |
+| `--calendar` | `-c` | Calendar name or ID. Default: calendar set via `flycal calendars` |
+| `--description` | `-d` | Filter events by text. Matches events where the string appears in the title or description (case-insensitive, contains) |
+
+**Time range behavior:**
+
+- If neither `--from` nor `--to` is given: searches from today at midnight to 23:59 of the 30th day from today
+- If `--in` is given: `--to` is ignored; the end time is computed from `--from` plus the duration
+- Examples: `--in 30days`, `--in 48hours`, `--in 1months`, `--in 1year`
+
+**Output:**
+
+Each event is printed as: `Calendar | Start | End | Title`
+
+The summary shows:
+- From and To dates used
+- Number of events found
+- Total time occupied (hours, minutes, and working days based on 8-hour days)
+
+## Configuration
+
+Data is stored in `~/.flycal/`:
+
+| File | Purpose |
+|------|---------|
+| `config.yml` | Default calendar ID and other settings |
+| `credentials.json` | OAuth credentials (created manually from Google Cloud Console) |
+| `tokens.yml` | Access tokens (managed automatically) |
+
+## Publishing to RubyGems
+
+### First release
+
+1. Create an account at [rubygems.org](https://rubygems.org) if needed
+2. Update `flycal-cli.gemspec` with your author, email, and homepage
+3. Build and push:
+
+```bash
+gem build flycal-cli.gemspec
 gem push flycal-cli-0.1.0.gem
 ```
 
-### Versioni successive
+### Subsequent releases
 
-1. Aggiorna la versione in `lib/flycal_cli/version.rb`
-2. Commit e tag:
-
-```bash
-git add .
-git commit -m "Release v0.2.0"
-git tag v0.2.0
-git push origin main
-git push origin v0.2.0
-```
-
-3. Build e push:
+1. Update the version in `lib/flycal_cli/version.rb`
+2. Build and push:
 
 ```bash
 gem build flycal-cli.gemspec
-gem push flycal-cli-0.2.0.gem
+gem push flycal-cli-X.Y.Z.gem
 ```
 
-### Usando `rake release` (raccomandato)
-
-Aggiungi al Rakefile:
-
-```ruby
-require "bundler/gem_tasks"
-```
-
-Poi:
+3. Optionally tag and push:
 
 ```bash
-# Per la prima release
-bundle exec rake release
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
 
-# Per release successive: aggiorna VERSION e poi
+### Using rake release
+
+With `bundler/gem_tasks` in your Rakefile:
+
+```bash
 bundle exec rake release
 ```
 
-`rake release` esegue: build, push su RubyGems, commit, tag e push su git.
+This builds the gem, pushes to RubyGems, and can handle git tagging and pushing.
 
-## Licenza
+## License
 
 MIT
