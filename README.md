@@ -71,9 +71,9 @@ Search for events in your calendar(s). Supports flexible date ranges and text fi
 
 ```bash
 flycal search
-flycal search --in 30days --description meeting
+flycal search --in 30days --description placeholder
 flycal search -f 2025-03-01 -t 2025-03-31 -c "Work"
-flycal search -i 2months -d rappydrive
+flycal search -i 2months -d placeholder
 ```
 
 **Options:**

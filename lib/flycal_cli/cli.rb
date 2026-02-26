@@ -112,8 +112,8 @@ module FlycalCli
 
       Examples:
         flycal search
-        flycal search --in 30days -d meeting
-        flycal search -i 1months --description rappydrive
+        flycal search --in 30days -d placeholder
+        flycal search -i 1months --description placeholder
         flycal search -f 2025-03-01 --in 2months
     LONGDESC
     option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"
