@@ -39,6 +39,13 @@ Before using flycal, you need OAuth credentials from Google Cloud Console:
 
 ## Commands
 
+All commands support a per-invocation locale override:
+
+```bash
+flycal search --locale it --in 7days
+flycal slots --locale en --in "3 days" --duration 1h
+```
+
 ### login
 
 Connect to your Google account. Opens a browser for OAuth authentication when not yet connected.
@@ -127,11 +134,13 @@ slots:
     - 9-13
     - 14-18
   weekdays-only: true
+locale: en
 ```
 
 - `workhours` accepts one or more ranges (`H-H`, `HH:MM-HH:MM`, mixed)
 - `weekdays-only: true` limits slots to Monday-Friday
 - `weekdays-only: false` includes weekends
+- `locale` supports `en` and `it` (default is `en`)
 
 **Output example:**
 

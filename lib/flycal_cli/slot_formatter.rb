@@ -20,7 +20,7 @@ module FlycalCli
       private
 
       def day_header(date)
-        "#{date.strftime('%A').downcase} #{date.day}/#{date.month}"
+        "#{Locale.day_name(date)} #{date.day}/#{date.month}"
       end
 
       def slot_range(start_at, end_at)

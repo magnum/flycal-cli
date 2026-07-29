@@ -12,6 +12,7 @@ require "tty-spinner"
 module FlycalCli
   class Cli < Thor
     package_name "flycal"
+    class_option :locale, type: :string, desc: "Override locale for this command (e.g. en, it)"
 
     def self.exit_on_failure?
       true
@@ -19,6 +20,7 @@ module FlycalCli
 
     desc "login", "Connect to your Google account"
     def login
+      apply_locale_override
       if Auth.logged_in?
         puts "✓ You are already connected to your Google account."
         puts "\nRun 'flycal calendars' to set the default calendar."
@@ -48,6 +50,7 @@ module FlycalCli
 
     desc "logout", "Disconnect from Google account"
     def logout
+      apply_locale_override
       unless Auth.logged_in?
         puts "You are not connected to any Google account."
         return
@@ -59,6 +62,7 @@ module FlycalCli
 
     desc "calendars", "List available calendars and set the default one"
     def calendars
+      apply_locale_override
       unless Auth.logged_in?
         puts "You are not connected. Run 'flycal login' first."
         exit 1
@@ -125,6 +129,7 @@ module FlycalCli
     option :in, type: :string, aliases: "-i", desc: "Duration: 30days, 48hours, 2months, 1year (overrides --to)"
     option :description, type: :string, aliases: "-d", desc: "Filter by text in event"
     def search
+      apply_locale_override
       unless Auth.logged_in?
         puts "You are not connected. Run 'flycal login' first."
         exit 1
@@ -181,8 +186,9 @@ module FlycalCli
            desc: "Search window from now (e.g. 3 days, 1 week, 48 hours)"
     option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"
     def slots
+      apply_locale_override
       unless Auth.logged_in?
-        puts "You are not connected. Run 'flycal login' first."
+        puts Locale.t("errors.not_connected")
         exit 1
       end
 
@@ -199,7 +205,7 @@ module FlycalCli
       end
 
       if time_min >= time_max
-        puts "Error: --in must be a positive duration."
+        puts Locale.t("errors.duration_positive")
         exit 1
       end
 
@@ -208,7 +214,7 @@ module FlycalCli
 
       calendar_id = resolve_single_calendar_id(service, options[:calendar])
       if calendar_id.nil?
-        puts "No calendar found. Run 'flycal calendars' to set a default."
+        puts Locale.t("slots.no_calendar")
         exit 1
       end
 
@@ -228,7 +234,7 @@ module FlycalCli
       )
 
       output = SlotFormatter.format_output(finder.slots_by_day)
-      puts output.empty? ? "No available slots found." : output
+      puts output.empty? ? Locale.t("slots.no_available") : output
     end
 
     default_task :help
@@ -239,6 +245,10 @@ module FlycalCli
 
     def bold(str)
       "\e[1m#{str}\e[0m"
+    end
+
+    def apply_locale_override
+      Locale.override!(options[:locale])
     end
 
     def parse_datetime(str, end_of_day: false)
@@ -388,7 +398,7 @@ module FlycalCli
       if dt.is_a?(String)
         dt
       else
-        dt.strftime("%a %Y-%m-%d %H:%M")
+        "#{Locale.day_abbr(dt)} #{dt.strftime("%Y-%m-%d %H:%M")}"
       end
     end
 
@@ -396,7 +406,7 @@ module FlycalCli
       return "-" if dt.nil?
 
       t = dt.respond_to?(:to_time) ? dt.to_time : dt
-      t.strftime("%a %Y-%m-%d")
+      "#{Locale.day_abbr(t)} #{t.strftime("%Y-%m-%d")}"
     end
 
     def print_search_summary(events, time_min:, time_max:)
@@ -486,7 +496,7 @@ module FlycalCli
         mins = minutes_in_period(event_ranges, period_start, period_end)
         hours = (mins / 60).round(1)
         working_days = (mins / 60.0 / HOURS_PER_WORKING_DAY).round(1)
-        month_name = current.strftime("%B %Y")
+        month_name = "#{Locale.month_name(current)} #{current.year}"
         start_str = format_date_with_day(period_start)
         last_day = (period_end.to_date - 1.day)
         end_str = format_date_with_day(last_day)

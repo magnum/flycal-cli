@@ -2,6 +2,7 @@
 
 require "flycal_cli/version"
 require "flycal_cli/config"
+require "flycal_cli/locale"
 require "flycal_cli/auth"
 require "flycal_cli/duration_parser"
 require "flycal_cli/calendar_service"

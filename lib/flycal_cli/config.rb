@@ -60,6 +60,18 @@ module FlycalCli
           "weekdays-only" => slots.key?("weekdays-only") ? slots["weekdays-only"] : true
         }
       end
+
+      def locale
+        value = load["locale"]
+        value = "en" if value.nil? || value.to_s.strip.empty?
+        value.to_s
+      end
+
+      def locale=(value)
+        data = load
+        data["locale"] = value.to_s
+        save(data)
+      end
     end
   end
 end

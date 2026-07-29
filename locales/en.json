@@ -1,0 +1,19 @@
+{
+  "common": {
+    "weekdays": {
+      "full": ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+      "abbr": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    },
+    "months": {
+      "full": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    }
+  },
+  "slots": {
+    "no_available": "No available slots found.",
+    "no_calendar": "No calendar found. Run 'flycal calendars' to set a default."
+  },
+  "errors": {
+    "not_connected": "You are not connected. Run 'flycal login' first.",
+    "duration_positive": "Error: --in must be a positive duration."
+  }
+}

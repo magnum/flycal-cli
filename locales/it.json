@@ -1,0 +1,19 @@
+{
+  "common": {
+    "weekdays": {
+      "full": ["domenica", "lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato"],
+      "abbr": ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"]
+    },
+    "months": {
+      "full": ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]
+    }
+  },
+  "slots": {
+    "no_available": "Nessuno slot disponibile.",
+    "no_calendar": "Nessun calendario trovato. Esegui 'flycal calendars' per impostare il predefinito."
+  },
+  "errors": {
+    "not_connected": "Non sei connesso. Esegui prima 'flycal login'.",
+    "duration_positive": "Errore: --in deve essere una durata positiva."
+  }
+}
