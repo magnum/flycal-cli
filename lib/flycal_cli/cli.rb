@@ -180,12 +180,6 @@ module FlycalCli
     option :in, type: :string, aliases: "-i", required: true,
            desc: "Search window from now (e.g. 3 days, 1 week, 48 hours)"
     option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"
-    option :workday_start, type: :string, default: "9:00",
-           desc: "Workday start time HH:MM (default: 9:00)"
-    option :workday_end, type: :string, default: "18:00",
-           desc: "Workday end time HH:MM (default: 18:00)"
-    option :weekdays_only, type: :boolean, default: true,
-           desc: "Limit slots to Monday-Friday (default: true)"
     def slots
       unless Auth.logged_in?
         puts "You are not connected. Run 'flycal login' first."
@@ -196,8 +190,9 @@ module FlycalCli
         slot_duration = DurationParser.to_seconds(options[:duration])
         time_min = Time.now
         time_max = DurationParser.add_to_time(options[:in], time_min)
-        workday_start_hour, workday_start_min = parse_hour_minute(options[:workday_start])
-        workday_end_hour, workday_end_min = parse_hour_minute(options[:workday_end])
+        slot_cfg = Config.slots_config
+        workhours = parse_workhours(slot_cfg["workhours"])
+        weekdays_only = !!slot_cfg["weekdays-only"]
       rescue FlycalCli::Error => e
         puts "Error: #{e.message}"
         exit 1
@@ -205,12 +200,6 @@ module FlycalCli
 
       if time_min >= time_max
         puts "Error: --in must be a positive duration."
-        exit 1
-      end
-      start_minutes = (workday_start_hour * 60) + workday_start_min
-      end_minutes = (workday_end_hour * 60) + workday_end_min
-      if end_minutes <= start_minutes
-        puts "Error: --workday-end must be later than --workday-start."
         exit 1
       end
 
@@ -234,11 +223,8 @@ module FlycalCli
         time_min: time_min,
         time_max: time_max,
         slot_duration_seconds: slot_duration,
-        workday_start_hour: workday_start_hour,
-        workday_start_min: workday_start_min,
-        workday_end_hour: workday_end_hour,
-        workday_end_min: workday_end_min,
-        weekdays_only: options[:weekdays_only]
+        workhours: workhours,
+        weekdays_only: weekdays_only
       )
 
       output = SlotFormatter.format_output(finder.slots_by_day)
@@ -300,6 +286,37 @@ module FlycalCli
       end
 
       [hour, minute]
+    end
+
+    def parse_workhours(values)
+      ranges = Array(values).map do |item|
+        start_str, end_str = item.to_s.strip.split("-", 2)
+        raise FlycalCli::Error, "Invalid workhours item #{item.inspect}. Use format like '9-13' or '14:30-18:00'." if start_str.nil? || end_str.nil?
+
+        sh, sm = parse_hour_minute_flexible(start_str)
+        eh, em = parse_hour_minute_flexible(end_str)
+        start_minutes = (sh * 60) + sm
+        end_minutes = (eh * 60) + em
+        raise FlycalCli::Error, "Invalid workhours range #{item.inspect}: end must be after start." if end_minutes <= start_minutes
+
+        [sh, sm, eh, em]
+      end
+
+      raise FlycalCli::Error, "slots.workhours cannot be empty in config.yml." if ranges.empty?
+
+      ranges.sort_by { |sh, sm, _eh, _em| (sh * 60) + sm }
+    end
+
+    def parse_hour_minute_flexible(value)
+      str = value.to_s.strip
+      if str.match?(/\A\d{1,2}\z/)
+        hour = str.to_i
+        raise FlycalCli::Error, "Invalid hour #{value.inspect}. Must be 0-23." unless hour.between?(0, 23)
+
+        return [hour, 0]
+      end
+
+      parse_hour_minute(str)
     end
 
     def resolve_calendar_ids(service, calendar_name)

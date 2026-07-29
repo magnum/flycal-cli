@@ -118,9 +118,20 @@ flycal slots --in "48 hours" --duration 1hour -c Work
 - `--duration` — Minimum slot length. Examples: `1h`, `1 hour`, `30 minutes`, `90min`
 - `--in` / `-i` — Search window from now. Examples: `3 days`, `1 week`, `48 hours` (use quotes when the value contains a space)
 - `--calendar` / `-c` — Calendar name or ID (optional; uses default calendar)
-- `--workday-start` — Start of slot search window per day, format `HH:MM` (default: `9:00`)
-- `--workday-end` — End of slot search window per day, format `HH:MM` (default: `18:00`)
-- `--weekdays-only` — Restrict results to Monday-Friday (default: `true`)
+
+Slot search windows are configured in `~/.flycal/config.yml`:
+
+```yaml
+slots:
+  workhours:
+    - 9-13
+    - 14-18
+  weekdays-only: true
+```
+
+- `workhours` accepts one or more ranges (`H-H`, `HH:MM-HH:MM`, mixed)
+- `weekdays-only: true` limits slots to Monday-Friday
+- `weekdays-only: false` includes weekends
 
 **Output example:**
 

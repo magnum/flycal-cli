@@ -2,30 +2,21 @@
 
 module FlycalCli
   class SlotFinder
-    DEFAULT_WORKDAY_START_HOUR = 9
-    DEFAULT_WORKDAY_START_MIN = 0
-    DEFAULT_WORKDAY_END_HOUR = 18
-    DEFAULT_WORKDAY_END_MIN = 0
+    DEFAULT_WORKHOURS = [[9, 0, 18, 0]].freeze
 
     def initialize(
       events:,
       time_min:,
       time_max:,
       slot_duration_seconds:,
-      workday_start_hour: DEFAULT_WORKDAY_START_HOUR,
-      workday_start_min: DEFAULT_WORKDAY_START_MIN,
-      workday_end_hour: DEFAULT_WORKDAY_END_HOUR,
-      workday_end_min: DEFAULT_WORKDAY_END_MIN,
+      workhours: DEFAULT_WORKHOURS,
       weekdays_only: true
     )
       @events = events
       @time_min = time_min
       @time_max = time_max
       @slot_duration_seconds = slot_duration_seconds
-      @workday_start_hour = workday_start_hour
-      @workday_start_min = workday_start_min
-      @workday_end_hour = workday_end_hour
-      @workday_end_min = workday_end_min
+      @workhours = workhours
       @weekdays_only = weekdays_only
     end
 
@@ -33,12 +24,14 @@ module FlycalCli
       result = {}
 
       each_workday do |date|
-        day_start, day_end = day_bounds(date)
-        next if day_end <= day_start
+        slots = []
+        day_intervals(date).each do |day_start, day_end|
+          next if day_end <= day_start
 
-        busy = busy_intervals_for(date, day_start, day_end)
-        gaps = free_gaps(day_start, day_end, busy)
-        slots = gaps.filter_map { |start_at, end_at| slot_if_fits(start_at, end_at) }
+          busy = busy_intervals_for(date, day_start, day_end)
+          gaps = free_gaps(day_start, day_end, busy)
+          slots.concat(gaps.filter_map { |start_at, end_at| slot_if_fits(start_at, end_at) })
+        end
         result[date] = slots unless slots.empty?
       end
 
@@ -67,12 +60,14 @@ module FlycalCli
       !date.saturday? && !date.sunday?
     end
 
-    def day_bounds(date)
-      start_at = Time.local(date.year, date.month, date.day, @workday_start_hour, @workday_start_min, 0)
-      end_at = Time.local(date.year, date.month, date.day, @workday_end_hour, @workday_end_min, 0)
-      start_at = [@time_min, start_at].max
-      end_at = [@time_max, end_at].min
-      [start_at, end_at]
+    def day_intervals(date)
+      @workhours.map do |start_h, start_m, end_h, end_m|
+        start_at = Time.local(date.year, date.month, date.day, start_h, start_m, 0)
+        end_at = Time.local(date.year, date.month, date.day, end_h, end_m, 0)
+        start_at = [@time_min, start_at].max
+        end_at = [@time_max, end_at].min
+        [start_at, end_at]
+      end
     end
 
     def busy_intervals_for(date, day_start, day_end)

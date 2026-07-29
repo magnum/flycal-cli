@@ -51,6 +51,15 @@ module FlycalCli
       def clear_all
         FileUtils.rm_rf(CONFIG_DIR)
       end
+
+      def slots_config
+        data = load
+        slots = data.fetch("slots", {})
+        {
+          "workhours" => slots["workhours"] || ["9-18"],
+          "weekdays-only" => slots.key?("weekdays-only") ? slots["weekdays-only"] : true
+        }
+      end
     end
   end
 end
