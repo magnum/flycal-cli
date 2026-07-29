@@ -128,8 +128,8 @@ flycal search -i 2months -d placeholder
 
 **Options:**
 
-- `--from` / `-f` — Start date/time. Default: midnight of current day. Format: `2025-01-01` or `2025-01-01T09:00`
-- `--to` / `-t` — End date/time. Default: 23:59 of the 30th day from today. Format: same as `--from`
+- `--from` / `-f` — Start date/time. Default: midnight of current day. Formats: `YYYY-MM-DD`, locale forms (`DD-MM-YYYY` for `it`, `MM-DD-YYYY` for `en`, `/` or `-`), or with time `YYYY-MM-DDTHH:MM`
+- `--to` / `-t` — End date/time. Default: 23:59 of the 30th day from today. Same formats as `--from`
 - `--in` / `-i` — Duration from `--from`, overrides `--to`. Format: `30days`, `48hours`, `2months`, `1year` (no space). With space use quotes: `--in "30 days"`
 - `--calendar` / `-c` — Calendar name or ID. Default: calendar set via `flycal config`
 - `--description` / `-d` — Filter events by text. Matches events where the string appears in title or description (case-insensitive, contains)
@@ -153,19 +153,38 @@ For time frames longer than 7 days, a weekly breakdown is added (week number, st
 
 ### slots
 
-Find free time slots in your calendar (weekdays, 9:00–18:00). Output is a simple list for copy/paste into email or other tools.
+Find free time slots in your calendar. Output is a simple list for copy/paste into email or other tools.
 
 ```bash
-flycal slots --in "3 days" --duration 1h
-flycal slots --in 1week --duration 30min
-flycal slots --in "48 hours" --duration 1hour -c Work
+flycal slots --duration 1h
+flycal slots --from 2026-08-01 --in "2 weeks" --duration 1h
+flycal slots --from 01/08/2026 --in 3days --duration 30min
+flycal slots --in 1week --duration 30min -c Work
 ```
 
 **Options:**
 
-- `--duration` — Minimum slot length. Examples: `1h`, `1 hour`, `30 minutes`, `90min`
-- `--in` / `-i` — Search window from now. Examples: `3 days`, `1 week`, `48 hours` (use quotes when the value contains a space)
+- `--duration` — Minimum slot length. Examples: `1h`, `1 hour`, `30 minutes`, `90min` (required)
+- `--from` / `-f` — Start date/time. Default: now. If a date without time is today, starts from the current time. Formats:
+  - always: `YYYY-MM-DD`, `YYYY/MM/DD`, optional time (`YYYY-MM-DDTHH:MM`)
+  - locale `it`: also `DD-MM-YYYY` / `DD/MM/YYYY`
+  - locale `en`: also `MM-DD-YYYY` / `MM/DD/YYYY`
+- `--in` / `-i` — Search window from `--from`. Default: `1 week`. Examples: `3 days`, `1 week`, `48 hours`
 - `--calendar` / `-c` — Calendar name or ID used as fallback when `exclude_calendars` is not configured
+
+**Output:**
+
+Always starts with a header and clickable calendar links (OSC 8), then the availability list:
+
+```
+slots in 1 week with min duration 1h, for calendars
+Incode - Antonio
+Personal
+
+friday 15/7
+10-12
+13-15.30
+```
 
 Slot search windows are configured in `~/.flycal/config.yml`:
 

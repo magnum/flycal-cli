@@ -137,12 +137,12 @@ module FlycalCli
         exit 1
       end
 
-      time_min = options[:from].to_s.empty? ? Date.today.to_time : parse_datetime(options[:from])
+      time_min = options[:from].to_s.empty? ? Date.today.to_time : DateTimeParser.parse(options[:from])
       begin
         time_max = if options[:in].to_s.empty?
-                     options[:to].to_s.empty? ? (Date.today + 30).to_time + 86400 - 1 : parse_datetime(options[:to], end_of_day: true)
+                     options[:to].to_s.empty? ? (Date.today + 30).to_time + 86400 - 1 : DateTimeParser.parse(options[:to], end_of_day: true)
                    else
-                     parse_duration_in(options[:in], time_min)
+                     DurationParser.add_to_time(options[:in], time_min)
                    end
       rescue FlycalCli::Error => e
         puts "Error: #{e.message}"
@@ -178,14 +178,21 @@ module FlycalCli
     long_desc <<-LONGDESC
       List free time slots long enough for a given duration.
 
+      Defaults:
+        --from  now
+        --in    1 week
+
       Examples:
-        flycal slots --in "3 days" --duration 1h
-        flycal slots --in 1week --duration 30min -c Work
+        flycal slots --duration 1h
+        flycal slots --from 2026-08-01 --in "2 weeks" --duration 1h
+        flycal slots --from 01/08/2026 --in 3days --duration 30min
     LONGDESC
     option :duration, type: :string, required: true,
            desc: "Minimum slot length (e.g. 1h, 30 minutes, 1 hour)"
-    option :in, type: :string, aliases: "-i", required: true,
-           desc: "Search window from now (e.g. 3 days, 1 week, 48 hours)"
+    option :in, type: :string, aliases: "-i", default: "1 week",
+           desc: "Search window from --from (default: 1 week)"
+    option :from, type: :string, aliases: "-f",
+           desc: "Start date/time (default: now). Formats: YYYY-MM-DD, locale date, or with time"
     option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"
     def slots
       apply_locale_override
@@ -194,10 +201,13 @@ module FlycalCli
         exit 1
       end
 
+      in_value = options[:in].to_s.strip
+      in_value = "1 week" if in_value.empty?
+
       begin
         slot_duration = DurationParser.to_seconds(options[:duration])
-        time_min = Time.now
-        time_max = DurationParser.add_to_time(options[:in], time_min)
+        time_min = DateTimeParser.parse_or_default(options[:from], default: Time.now)
+        time_max = DurationParser.add_to_time(in_value, time_min)
         slot_cfg = Config.slots_config
         workhours = parse_workhours(slot_cfg["workhours"])
         weekdays_only = !!slot_cfg["weekdays_only"]
@@ -220,6 +230,13 @@ module FlycalCli
         exit 1
       end
 
+      calendars = service.list_calendars
+      calendar_meta = exclude_calendar_ids.filter_map do |id|
+        cal = calendars.find { |c| c.id == id }
+        name = cal&.summary || id
+        { id: id, name: name }
+      end
+
       events = exclude_calendar_ids.flat_map do |calendar_id|
         service.list_events(
           calendar_id,
@@ -240,7 +257,14 @@ module FlycalCli
         weekdays_only: weekdays_only
       )
 
-      output = SlotFormatter.format_output(finder.slots_by_day)
+      slots_by_day = finder.slots_by_day
+      puts SlotFormatter.format_header(
+        in_value: in_value,
+        duration: options[:duration],
+        calendars: calendar_meta
+      )
+      puts ""
+      output = SlotFormatter.format_output(slots_by_day)
       puts output.empty? ? Locale.t("slots.no_available") : output
     end
 
@@ -416,40 +440,6 @@ module FlycalCli
       else
         primary = calendars.find(&:primary)
         primary ? [primary.id] : calendars.first(1).map(&:id)
-      end
-    end
-
-    def parse_datetime(str, end_of_day: false)
-      return nil if str.nil? || str.empty?
-
-      if str.include?("T")
-        Time.parse(str)
-      else
-        d = Date.parse(str)
-        t = d.to_time
-        end_of_day ? t + 86400 - 1 : t  # 23:59:59 for --to when date-only
-      end
-    end
-
-    def parse_duration_in(str, from_time)
-      # Support both "30days" and "30 days" (no space avoids shell splitting)
-      m = str.to_s.strip.match(/\A(\d+)\s*(day|days|d|hour|hours|h|month|months|m|year|years|y)\z/i)
-      raise FlycalCli::Error, "Invalid --in format. Use: 30days, 48hours, 2months, 1year (no space, or quote: --in \"30 days\")" unless m
-
-      n = m[1].to_i
-      unit = m[2].downcase
-
-      case unit
-      when "hour", "hours", "h"
-        from_time + n * 3600
-      when "day", "days", "d"
-        from_time + n * 86400
-      when "month", "months", "m"
-        (from_time.to_date >> n).to_time + (from_time.hour * 3600 + from_time.min * 60 + from_time.sec)
-      when "year", "years", "y"
-        (from_time.to_date >> (n * 12)).to_time + (from_time.hour * 3600 + from_time.min * 60 + from_time.sec)
-      else
-        raise FlycalCli::Error, "Invalid unit: #{unit}. Use: days, hours, months, years"
       end
     end
 

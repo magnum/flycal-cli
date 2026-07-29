@@ -10,7 +10,9 @@ module FlycalCli
       "m" => :minutes, "min" => :minutes, "mins" => :minutes, "minute" => :minutes, "minutes" => :minutes,
       "h" => :hours, "hr" => :hours, "hour" => :hours, "hours" => :hours,
       "d" => :days, "day" => :days, "days" => :days,
-      "w" => :weeks, "week" => :weeks, "weeks" => :weeks
+      "w" => :weeks, "week" => :weeks, "weeks" => :weeks,
+      "month" => :months, "months" => :months,
+      "y" => :years, "year" => :years, "years" => :years
     }.freeze
 
     class << self
@@ -21,11 +23,18 @@ module FlycalCli
         raise FlycalCli::Error, invalid_message(str) unless match
 
         value = match[1].to_f
-        unit = UNITS[match[2]]
+        unit_key = match[2]
+        unit = UNITS[unit_key]
         raise FlycalCli::Error, invalid_message(str) unless unit
+        # Ambiguous bare "m": treat as minutes (not months)
+        unit = :minutes if unit_key == "m"
 
-        duration = value.public_send(unit)
-        duration
+        # months/years are Integer-only ActiveSupport extensions
+        if %i[months years].include?(unit)
+          value.to_i.public_send(unit)
+        else
+          value.public_send(unit)
+        end
       end
 
       def to_seconds(str)
@@ -39,7 +48,7 @@ module FlycalCli
       private
 
       def invalid_message(str)
-        "Invalid duration: #{str.inspect}. Examples: 1h, 1 hour, 30 minutes, 3 days"
+        "Invalid duration: #{str.inspect}. Examples: 1h, 30 minutes, 3 days, 1 week, 2 months, 1 year"
       end
     end
   end

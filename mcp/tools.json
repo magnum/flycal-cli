@@ -240,40 +240,46 @@
     {
       "name": "flycal_slots",
       "title": "Find free time slots",
-      "description": "Find free slots within configured workhours, subtracting busy events from slots.exclude_calendars (or calendar_default if that list is empty). Output is a copy-paste friendly day list. Times rounded to 15 minutes. Read-only.",
+      "description": "Find free slots within configured workhours, subtracting busy events from slots.exclude_calendars (or calendar_default if that list is empty). Starts from --from (default: now) for a window of --in (default: 1 week). Output begins with a header and clickable Google Calendar links, then a copy-paste friendly day list. Times rounded to 15 minutes. Read-only.",
       "interactive": false,
       "requires_auth": true,
       "command": {
         "argv_template": ["flycal", "slots"],
-        "required_options": ["duration", "in"],
+        "required_options": ["duration"],
         "option_map": {
           "duration": ["--duration", "{value}"],
+          "from": ["--from", "{value}"],
           "in": ["--in", "{value}"],
           "calendar": ["--calendar", "{value}"],
           "locale": ["--locale", "{value}"]
         },
         "examples": [
+          ["flycal", "slots", "--duration", "1h"],
+          ["flycal", "slots", "--from", "2026-08-01", "--in", "2 weeks", "--duration", "1h"],
           ["flycal", "slots", "--in", "3 days", "--duration", "1h"],
-          ["flycal", "slots", "--in", "1week", "--duration", "30min"],
-          ["flycal", "slots", "--in", "48 hours", "--duration", "1hour", "-c", "Work"]
+          ["flycal", "slots", "--in", "1week", "--duration", "30min"]
         ]
       },
       "output": {
         "format": "text/plain",
-        "example": "friday 15/7\n10-12\n13-15.30\n\nmonday 21/7\n12-13\n14-15"
+        "example": "slots in 1 week with min duration 1h, for calendars\nWork\n\nfriday 15/7\n10-12\n13-15.30\n\nmonday 21/7\n12-13\n14-15"
       },
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["duration", "in"],
+        "required": ["duration"],
         "properties": {
           "duration": {
             "type": "string",
             "description": "Minimum slot length. Examples: 1h, 1 hour, 30 minutes, 90min."
           },
+          "from": {
+            "type": "string",
+            "description": "Start date/time. Default: now. YYYY-MM-DD always; with locale it also DD-MM-YYYY; with locale en also MM-DD-YYYY. Separators - or /. Optional time."
+          },
           "in": {
             "type": "string",
-            "description": "Search window from now. Examples: 3 days, 1 week, 48 hours (quote if spaces)."
+            "description": "Search window from --from. Default: 1 week. Examples: 3 days, 1 week, 48 hours (quote if spaces)."
           },
           "calendar": {
             "type": "string",

@@ -8,6 +8,8 @@
 - `flycal config` interactive menu to set `calendar_default`, `exclude_calendars`, or open `~/.flycal/config.yml` with `$EDITOR`
 - `slots.exclude_calendars` in config: events from these calendars block free slots; if empty, falls back to `calendar_default`
 - Automatic migration of legacy config keys (`exclude-calendars` → `exclude_calendars`, `weekdays-only` → `weekdays_only`)
+- Centralized `DateTimeParser` for locale-aware date parsing (`YYYY-MM-DD`, `DD-MM-YYYY` for `it`, `MM-DD-YYYY` for `en`, `/` or `-`)
+- `flycal slots --from` to start the search window from a given date/time (default: now)
 
 ### Changed
 
@@ -15,6 +17,8 @@
 - Config keys renamed for consistency: `weekdays_only`, `exclude_calendars`
 - In `flycal config`, the current default calendar and already-selected exclude calendars are shown bold and underlined
 - Slot search subtracts busy time from all calendars listed in `exclude_calendars`
+- `flycal slots --in` defaults to `1 week`; `--duration` remains required
+- `flycal slots` prints a header with duration/window and clickable Google Calendar links before availability
 
 ### Fixed
 
