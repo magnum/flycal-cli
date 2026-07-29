@@ -1,0 +1,297 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "flycal-cli",
+  "title": "flycal CLI MCP tools catalog",
+  "description": "Machine-readable catalog of flycal-cli commands for MCP servers. Each tool maps to a CLI invocation via the `command` template. Non-interactive tools are safe to run from an MCP host; interactive tools require a TTY and should be surfaced as guidance only or refused unless the client can attach a terminal.",
+  "version": "0.5.0",
+  "binary": "flycal",
+  "homepage": "https://github.com/magnum/flycal-cli",
+  "locale": {
+    "global_option": "--locale",
+    "supported": ["en", "it"],
+    "default": "en",
+    "config_key": "locale"
+  },
+  "config": {
+    "path": "~/.flycal/config.yml",
+    "credentials_path": "~/.flycal/credentials.json",
+    "keys": {
+      "calendar_default": {
+        "type": "string",
+        "description": "Default Google Calendar ID used by search and as slots fallback"
+      },
+      "locale": {
+        "type": "string",
+        "enum": ["en", "it"],
+        "description": "Default CLI locale"
+      },
+      "slots.workhours": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Work-hour ranges used by slots, e.g. [\"9:30-13:00\", \"14:00-18:30\"]"
+      },
+      "slots.weekdays_only": {
+        "type": "boolean",
+        "description": "When true, slots are searched Mon–Fri only"
+      },
+      "slots.exclude_calendars": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Calendar IDs whose events block free slots. If empty, calendar_default is used."
+      }
+    }
+  },
+  "notes": [
+    "flycal is read-only against Google Calendar (no create/update/delete of events).",
+    "Auth uses OAuth desktop flow; tokens live under ~/.flycal/.",
+    "Prefer quoting duration values that contain spaces (e.g. --in \"3 days\").",
+    "Duration formats without spaces also work (e.g. 30days, 48hours, 1h, 30min)."
+  ],
+  "tools": [
+    {
+      "name": "flycal_version",
+      "title": "Show flycal version",
+      "description": "Print the installed flycal-cli version.",
+      "interactive": false,
+      "requires_auth": false,
+      "command": {
+        "argv": ["flycal", "version"],
+        "alternatives": [["flycal", "--version"], ["flycal", "-v"]]
+      },
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": ["en", "it"],
+            "description": "Optional locale override for this invocation"
+          }
+        }
+      }
+    },
+    {
+      "name": "flycal_update",
+      "title": "Update flycal gem",
+      "description": "Run gem update flycal-cli to install the latest published version.",
+      "interactive": false,
+      "requires_auth": false,
+      "side_effects": ["updates_local_gem"],
+      "command": {
+        "argv": ["flycal", "update"]
+      },
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": ["en", "it"]
+          }
+        }
+      }
+    },
+    {
+      "name": "flycal_login",
+      "title": "Connect Google account",
+      "description": "Start OAuth browser login for Google Calendar. Requires ~/.flycal/credentials.json and a browser. Interactive.",
+      "interactive": true,
+      "requires_auth": false,
+      "side_effects": ["writes_tokens"],
+      "command": {
+        "argv": ["flycal", "login"]
+      },
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": ["en", "it"]
+          }
+        }
+      }
+    },
+    {
+      "name": "flycal_logout",
+      "title": "Disconnect Google account",
+      "description": "Remove stored Google OAuth tokens and disconnect the account.",
+      "interactive": false,
+      "requires_auth": false,
+      "side_effects": ["deletes_tokens"],
+      "command": {
+        "argv": ["flycal", "logout"]
+      },
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": ["en", "it"]
+          }
+        }
+      }
+    },
+    {
+      "name": "flycal_calendars",
+      "title": "List calendars",
+      "description": "List available Google calendars as lines of \"name id\". Does not change configuration.",
+      "interactive": false,
+      "requires_auth": true,
+      "command": {
+        "argv": ["flycal", "calendars"]
+      },
+      "output": {
+        "format": "text/lines",
+        "example": "Work molinari@incode.it\nPersonal user@gmail.com"
+      },
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": ["en", "it"]
+          }
+        }
+      }
+    },
+    {
+      "name": "flycal_config",
+      "title": "Configure flycal (interactive)",
+      "description": "Interactive configuration menu. Options: calendar_default (single select), exclude_calendars (multi-select, min 1), edit config (opens ~/.flycal/config.yml in $EDITOR or vi). Ctrl+C prints \"config cancelled...\". Prefer editing config.yml or using dedicated non-interactive flows from MCP hosts.",
+      "interactive": true,
+      "requires_auth": true,
+      "side_effects": ["writes_config"],
+      "command": {
+        "argv": ["flycal", "config"]
+      },
+      "menu_options": [
+        "calendar_default",
+        "exclude_calendars",
+        "edit config"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": ["en", "it"]
+          }
+        }
+      }
+    },
+    {
+      "name": "flycal_search",
+      "title": "Search calendar events",
+      "description": "Search Google Calendar events. Prints one line per event (Calendar | Start | End | Title) plus a summary with total occupied time in hours/minutes and 8-hour working days. For ranges >7 days adds a weekly breakdown; for >30 days a monthly breakdown. Contains-filter on title/description when description is set. Read-only.",
+      "interactive": false,
+      "requires_auth": true,
+      "command": {
+        "argv_template": ["flycal", "search"],
+        "option_map": {
+          "calendar": ["--calendar", "{value}"],
+          "from": ["--from", "{value}"],
+          "to": ["--to", "{value}"],
+          "in": ["--in", "{value}"],
+          "description": ["--description", "{value}"],
+          "locale": ["--locale", "{value}"]
+        },
+        "examples": [
+          ["flycal", "search"],
+          ["flycal", "search", "--in", "30days", "--description", "placeholder"],
+          ["flycal", "search", "-f", "2025-03-01", "-t", "2025-03-31", "-c", "Work"],
+          ["flycal", "search", "--in", "2months", "-d", "placeholder", "--locale", "it"]
+        ]
+      },
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "calendar": {
+            "type": "string",
+            "description": "Calendar name or ID. Default: calendar_default from config."
+          },
+          "from": {
+            "type": "string",
+            "description": "Start datetime. Default: today midnight. Formats: YYYY-MM-DD or YYYY-MM-DDTHH:MM"
+          },
+          "to": {
+            "type": "string",
+            "description": "End datetime. Default: 23:59 of day 30 from today. Ignored when `in` is set."
+          },
+          "in": {
+            "type": "string",
+            "description": "Duration from `from` (or now/from default), overrides `to`. Prefer no spaces or quote values: 30days, 48hours, 2months, 1year, or \"30 days\"."
+          },
+          "description": {
+            "type": "string",
+            "description": "Case-insensitive contains filter on event summary or description."
+          },
+          "locale": {
+            "type": "string",
+            "enum": ["en", "it"]
+          }
+        }
+      }
+    },
+    {
+      "name": "flycal_slots",
+      "title": "Find free time slots",
+      "description": "Find free slots within configured workhours, subtracting busy events from slots.exclude_calendars (or calendar_default if that list is empty). Output is a copy-paste friendly day list. Times rounded to 15 minutes. Read-only.",
+      "interactive": false,
+      "requires_auth": true,
+      "command": {
+        "argv_template": ["flycal", "slots"],
+        "required_options": ["duration", "in"],
+        "option_map": {
+          "duration": ["--duration", "{value}"],
+          "in": ["--in", "{value}"],
+          "calendar": ["--calendar", "{value}"],
+          "locale": ["--locale", "{value}"]
+        },
+        "examples": [
+          ["flycal", "slots", "--in", "3 days", "--duration", "1h"],
+          ["flycal", "slots", "--in", "1week", "--duration", "30min"],
+          ["flycal", "slots", "--in", "48 hours", "--duration", "1hour", "-c", "Work"]
+        ]
+      },
+      "output": {
+        "format": "text/plain",
+        "example": "friday 15/7\n10-12\n13-15.30\n\nmonday 21/7\n12-13\n14-15"
+      },
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["duration", "in"],
+        "properties": {
+          "duration": {
+            "type": "string",
+            "description": "Minimum slot length. Examples: 1h, 1 hour, 30 minutes, 90min."
+          },
+          "in": {
+            "type": "string",
+            "description": "Search window from now. Examples: 3 days, 1 week, 48 hours (quote if spaces)."
+          },
+          "calendar": {
+            "type": "string",
+            "description": "Fallback calendar name/ID when exclude_calendars is not configured."
+          },
+          "locale": {
+            "type": "string",
+            "enum": ["en", "it"]
+          }
+        }
+      }
+    }
+  ],
+  "mcp_implementation_hints": {
+    "execution": "Spawn the flycal binary with argv from command.argv or build argv from option_map. Capture stdout/stderr and exit code. Return stdout as MCP text content.",
+    "interactive_tools": "Do not auto-run tools with interactive=true unless the host provides a TTY. Instead tell the user to run the command in a terminal.",
+    "auth_errors": "If stdout/stderr indicates the user is not connected, suggest flycal login.",
+    "locale_arg": "If input.locale is set, append --locale <value> to argv for any tool.",
+    "tool_filter": "Expose at least flycal_search, flycal_slots, flycal_calendars, and flycal_version for agent use."
+  }
+}
