@@ -314,6 +314,11 @@ module FlycalCli
       end
     end
 
+    def choice_labels_for_ids(choices, calendar_ids)
+      ids = Array(calendar_ids).compact
+      choices.select { |_label, id| ids.include?(id) }.keys
+    end
+
     def config_calendar_default
       calendars = load_calendars
       return if calendars.nil?
@@ -342,12 +347,14 @@ module FlycalCli
       default_id = Config.calendar_default
       configured = Config.exclude_calendars
       current_ids = resolve_calendar_refs(calendars, configured)
-      preselected = current_ids.empty? && default_id ? [default_id] : current_ids
+      preselected_ids = current_ids.empty? && default_id ? [default_id] : current_ids
+      choices = calendar_choices(calendars, highlight_ids: current_ids)
+      preselected_labels = choice_labels_for_ids(choices, preselected_ids)
 
       selected_ids = prompt.multi_select(
         Locale.t("config.exclude_calendars.prompt"),
-        calendar_choices(calendars, highlight_ids: current_ids),
-        default: preselected,
+        choices,
+        default: preselected_labels,
         min: 1,
         per_page: 15,
         filter: true
