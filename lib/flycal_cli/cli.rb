@@ -195,7 +195,7 @@ module FlycalCli
     option :in, type: :string, aliases: "-i", default: "1 week",
            desc: "Search window from --from (default: 1 week)"
     option :from, type: :string, aliases: "-f",
-           desc: "Start date/time (default from config: slots.defaults.from)"
+           desc: "Start (default: now). Dates, or relative: monday, next monday, tomorrow, lunedi..."
     option :template, type: :string, aliases: "-T",
            desc: "Slot template name from config (default: first template, usually work)"
     option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"

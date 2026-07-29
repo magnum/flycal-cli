@@ -287,7 +287,7 @@
           },
           "from": {
             "type": "string",
-            "description": "Start date/time. Default: now. YYYY-MM-DD always; with locale it also DD-MM-YYYY; with locale en also MM-DD-YYYY. Separators - or /. Optional time."
+            "description": "Start date/time. Default: now. Absolute dates, or relative: monday, next monday, tomorrow, lunedi, prossimo lunedi, etc."
           },
           "in": {
             "type": "string",

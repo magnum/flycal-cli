@@ -157,16 +157,18 @@ Find free time slots in your calendar. Output is a simple list for copy/paste in
 
 ```bash
 flycal slots
-flycal slots --in "5 days"
+flycal slots --from monday --in "5 days"
+flycal slots --from "next monday" --in "5 days" --locale it
+flycal slots --from lunedi --in "5 days" --locale it
 flycal slots --in "12 days" --template dinner
-flycal slots --duration 1h
-flycal slots --from 2026-08-01 --in "2 weeks" --duration 1h
 ```
 
 **Options:**
 
 - `--duration` — Slot length. Default: `slots.defaults.default_duration` in config (`45min`). Examples: `1h`, `30 minutes`
-- `--from` / `-f` — Start date/time. Default: `slots.defaults.from` in config (`now`). If a date without time is today, starts from the current time.
+- `--from` / `-f` — Start date/time. Default: `slots.defaults.from` in config (`now`). Accepts:
+  - absolute: `YYYY-MM-DD`, locale dates (`DD-MM-YYYY` / `MM-DD-YYYY`), optional time
+  - relative: `now`, `today`/`oggi`, `tomorrow`/`domani`, `monday`/`lunedi`, `next monday`/`prossimo lunedi`, `last friday`/`scorso venerdi`
 - `--in` / `-i` — Search window from `--from`. Default: `1 week`.
 - `--template` / `-T` — Template from `slots.templates` in config. Default: first template (`work`)
 - `--calendar` / `-c` — Calendar name or ID used as fallback when `exclude_calendars` is not configured

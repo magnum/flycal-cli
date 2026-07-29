@@ -12,15 +12,37 @@ module FlycalCli
   #   YYYY-MM-DD, YYYY/MM/DD
   #   YYYY-MM-DDTHH:MM, YYYY-MM-DD HH:MM(:SS)
   #
+  # Relative forms (en + it):
+  #   now, today/oggi, tomorrow/domani, yesterday/ieri
+  #   monday / lunedi, next monday / prossimo lunedi, last friday / scorso venerdi
+  #
   # With locale +it+: DD-MM-YYYY / DD/MM/YYYY (+ optional time)
   # With locale +en+ (default): MM-DD-YYYY / MM/DD/YYYY (+ optional time)
   class DateTimeParser
     TIME_SUFFIX = '(?:\s+|T)(\d{1,2}):(\d{2})(?::(\d{2}))?'.freeze
 
+    # Ruby Date#wday: 0=Sunday ... 6=Saturday
+    WEEKDAYS = {
+      "sunday" => 0, "sun" => 0, "domenica" => 0, "dom" => 0,
+      "monday" => 1, "mon" => 1, "lunedi" => 1, "lunedì" => 1, "lun" => 1,
+      "tuesday" => 2, "tue" => 2, "martedi" => 2, "martedì" => 2, "mar" => 2,
+      "wednesday" => 3, "wed" => 3, "mercoledi" => 3, "mercoledì" => 3, "mer" => 3,
+      "thursday" => 4, "thu" => 4, "giovedi" => 4, "giovedì" => 4, "gio" => 4,
+      "friday" => 5, "fri" => 5, "venerdi" => 5, "venerdì" => 5, "ven" => 5,
+      "saturday" => 6, "sat" => 6, "sabato" => 6, "sab" => 6
+    }.freeze
+
+    NEXT_WORDS = %w[next prossimo prossima].freeze
+    LAST_WORDS = %w[last scorso scorsa].freeze
+    THIS_WORDS = %w[this questo questa].freeze
+
     class << self
       def parse(str, end_of_day: false, locale: nil)
         value = str.to_s.strip
         raise FlycalCli::Error, invalid_message(str) if value.empty?
+
+        relative = parse_relative(value, end_of_day: end_of_day)
+        return relative if relative
 
         loc = (locale || Locale.current_locale).to_s
         formats = formats_for(loc)
@@ -33,7 +55,6 @@ module FlycalCli
           return build_time(year, month, day, hour, min, sec, end_of_day: end_of_day)
         end
 
-        # Last resort: ISO8601 / Time.parse for full timestamps
         begin
           return Time.iso8601(value)
         rescue ArgumentError
@@ -55,6 +76,76 @@ module FlycalCli
       end
 
       private
+
+      def parse_relative(value, end_of_day:)
+        normalized = value.downcase.strip
+        normalized = normalized.tr("àèéìòù", "aeeiou")
+
+        case normalized
+        when "now", "adesso", "ora"
+          return Time.now
+        when "today", "oggi"
+          return time_for_date(Date.today, end_of_day: end_of_day)
+        when "tomorrow", "domani"
+          return time_for_date(Date.today + 1, end_of_day: end_of_day)
+        when "yesterday", "ieri"
+          return time_for_date(Date.today - 1, end_of_day: end_of_day)
+        end
+
+        weekday = parse_weekday_phrase(normalized)
+        return nil unless weekday
+
+        time_for_date(weekday, end_of_day: end_of_day)
+      end
+
+      def parse_weekday_phrase(normalized)
+        tokens = normalized.split(/\s+/)
+        return nil if tokens.empty?
+
+        qualifier = nil
+        day_token = nil
+
+        if tokens.length == 1
+          day_token = tokens[0]
+        elsif tokens.length == 2
+          qualifier = tokens[0]
+          day_token = tokens[1]
+        else
+          return nil
+        end
+
+        wday = WEEKDAYS[day_token]
+        return nil unless wday
+
+        today = Date.today
+
+        if qualifier.nil? || THIS_WORDS.include?(qualifier)
+          next_weekday(today, wday, inclusive: true)
+        elsif NEXT_WORDS.include?(qualifier)
+          next_weekday(today, wday, inclusive: false)
+        elsif LAST_WORDS.include?(qualifier)
+          previous_weekday(today, wday, inclusive: false)
+        end
+      end
+
+      def next_weekday(from, wday, inclusive:)
+        delta = (wday - from.wday) % 7
+        delta = 7 if delta.zero? && !inclusive
+        from + delta
+      end
+
+      def previous_weekday(from, wday, inclusive:)
+        delta = (from.wday - wday) % 7
+        delta = 7 if delta.zero? && !inclusive
+        from - delta
+      end
+
+      def time_for_date(date, end_of_day:)
+        return end_of_day_for(date) if end_of_day
+        return [date.to_time, Time.now].max if date == Date.today
+
+        date.to_time
+      end
 
       def formats_for(locale)
         iso = [
@@ -98,10 +189,7 @@ module FlycalCli
         date = Date.new(year, month, day)
 
         if hour.nil?
-          return end_of_day_for(date) if end_of_day
-          return [date.to_time, Time.now].max if date == Date.today
-
-          return date.to_time
+          return time_for_date(date, end_of_day: end_of_day)
         end
 
         Time.local(year, month, day, hour, min || 0, sec || 0)
@@ -119,9 +207,9 @@ module FlycalCli
 
       def invalid_message(str)
         if Locale.current_locale.to_s == "it"
-          "Data non valida: #{str.inspect}. Usa YYYY-MM-DD, DD-MM-YYYY (anche con /) o con orario."
+          "Data non valida: #{str.inspect}. Usa YYYY-MM-DD, DD-MM-YYYY, oggi/domani, lunedi, prossimo lunedi, ecc."
         else
-          "Invalid date: #{str.inspect}. Use YYYY-MM-DD, MM-DD-YYYY (also with /), or with time."
+          "Invalid date: #{str.inspect}. Use YYYY-MM-DD, MM-DD-YYYY, today/tomorrow, monday, next monday, etc."
         end
       end
     end
