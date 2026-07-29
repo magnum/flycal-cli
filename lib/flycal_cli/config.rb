@@ -9,12 +9,20 @@ module FlycalCli
     CONFIG_FILE = File.join(CONFIG_DIR, "config.yml")
     CREDENTIALS_FILE = File.join(CONFIG_DIR, "credentials.json")
     TOKENS_FILE = File.join(CONFIG_DIR, "tokens.yml")
+    DEFAULTS_FILE = File.expand_path("../../config/defaults.yml", __dir__)
 
     class << self
       def load
-        return {} unless File.exist?(CONFIG_FILE)
+        user_data = if File.exist?(CONFIG_FILE)
+                      YAML.load_file(CONFIG_FILE) || {}
+                    else
+                      {}
+                    end
 
-        YAML.load_file(CONFIG_FILE) || {}
+        merged, changed = merge_missing_defaults(user_data, default_values)
+        save(merged) if changed || !File.exist?(CONFIG_FILE)
+
+        merged
       end
 
       def save(data)
@@ -53,18 +61,11 @@ module FlycalCli
       end
 
       def slots_config
-        data = load
-        slots = data.fetch("slots", {})
-        {
-          "workhours" => slots["workhours"] || ["9-18"],
-          "weekdays-only" => slots.key?("weekdays-only") ? slots["weekdays-only"] : true
-        }
+        load.fetch("slots", {})
       end
 
       def locale
-        value = load["locale"]
-        value = "en" if value.nil? || value.to_s.strip.empty?
-        value.to_s
+        load["locale"].to_s
       end
 
       def locale=(value)
@@ -72,6 +73,45 @@ module FlycalCli
         data["locale"] = value.to_s
         save(data)
       end
+
+      def default_values
+        @default_values ||= begin
+          raise "Defaults file not found: #{DEFAULTS_FILE}" unless File.exist?(DEFAULTS_FILE)
+
+          YAML.load_file(DEFAULTS_FILE) || {}
+        end
+      end
+
+      def merge_missing_defaults(target, defaults)
+        merged = target.dup
+        changed = false
+
+        defaults.each do |key, default_value|
+          if !merged.key?(key)
+            merged[key] = deep_dup(default_value)
+            changed = true
+          elsif default_value.is_a?(Hash) && merged[key].is_a?(Hash)
+            nested, nested_changed = merge_missing_defaults(merged[key], default_value)
+            merged[key] = nested
+            changed ||= nested_changed
+          end
+        end
+
+        [merged, changed]
+      end
+
+      def deep_dup(value)
+        case value
+        when Hash
+          value.transform_values { |v| deep_dup(v) }
+        when Array
+          value.map { |v| deep_dup(v) }
+        else
+          value
+        end
+      end
+
+      private :default_values, :merge_missing_defaults, :deep_dup
     end
   end
 end

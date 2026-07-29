@@ -237,6 +237,23 @@ module FlycalCli
       puts output.empty? ? Locale.t("slots.no_available") : output
     end
 
+    desc "update", "Update flycal-cli to the latest gem version"
+    def update
+      apply_locale_override
+      puts "Updating flycal-cli..."
+      success = system("gem", "update", "flycal-cli")
+      return if success
+
+      puts "Error: failed to update flycal-cli."
+      exit 1
+    end
+
+    desc "version", "Show current flycal-cli version"
+    def version
+      apply_locale_override
+      puts "flycal #{FlycalCli::VERSION}"
+    end
+
     default_task :help
 
     private

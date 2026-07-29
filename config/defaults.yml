@@ -1,0 +1,6 @@
+locale: en
+slots:
+  workhours:
+    - 9:30-13:00
+    - 14:00-18:30
+  weekdays-only: true

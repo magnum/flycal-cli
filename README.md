@@ -64,6 +64,24 @@ Disconnect from your Google account and remove stored tokens.
 flycal logout
 ```
 
+### update
+
+Update `flycal-cli` to the latest published gem version.
+
+```bash
+flycal update
+```
+
+### version
+
+Show the current installed `flycal-cli` version.
+
+```bash
+flycal version
+flycal --version
+flycal -v
+```
+
 ### calendars
 
 List available calendars and set the default one. Uses an interactive scrollable menu (arrow keys to navigate, type to filter).
@@ -131,11 +149,13 @@ Slot search windows are configured in `~/.flycal/config.yml`:
 ```yaml
 slots:
   workhours:
-    - 9-13
-    - 14-18
+    - 9:30-13:00
+    - 14:00-18:30
   weekdays-only: true
 locale: en
 ```
+
+Missing keys are filled from `config/defaults.yml` in the gem and saved to your `config.yml` on first read.
 
 - `workhours` accepts one or more ranges (`H-H`, `HH:MM-HH:MM`, mixed)
 - `weekdays-only: true` limits slots to Monday-Friday
