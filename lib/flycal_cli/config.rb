@@ -20,7 +20,8 @@ module FlycalCli
                     end
 
         merged, changed = merge_missing_defaults(user_data, default_values)
-        save(merged) if changed || !File.exist?(CONFIG_FILE)
+        merged, migrated = normalize_slots_keys(merged)
+        save(merged) if changed || migrated || !File.exist?(CONFIG_FILE)
 
         merged
       end
@@ -62,6 +63,45 @@ module FlycalCli
 
       def slots_config
         load.fetch("slots", {})
+      end
+
+      def exclude_calendars
+        Array(slots_config["exclude_calendars"]).map(&:to_s).reject(&:empty?)
+      end
+
+      def exclude_calendars=(calendar_ids)
+        data = load
+        data["slots"] ||= {}
+        data["slots"]["exclude_calendars"] = Array(calendar_ids).map(&:to_s)
+        save(data)
+      end
+
+      def normalize_slots_keys(data)
+        slots = data["slots"]
+        return [data, false] unless slots.is_a?(Hash)
+
+        changed = false
+        normalized = slots.dup
+
+        if normalized.key?("exclude-calendars") && !normalized.key?("exclude_calendars")
+          normalized["exclude_calendars"] = normalized.delete("exclude-calendars")
+          changed = true
+        end
+
+        if normalized.key?("weekdays-only") && !normalized.key?("weekdays_only")
+          normalized["weekdays_only"] = normalized.delete("weekdays-only")
+          changed = true
+        end
+
+        return [data, false] unless changed
+
+        data = data.dup
+        data["slots"] = normalized
+        [data, true]
+      end
+
+      def config_file
+        CONFIG_FILE
       end
 
       def locale

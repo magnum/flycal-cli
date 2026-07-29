@@ -1,5 +1,6 @@
 {
   "common": {
+    "loading_calendars": "Loading calendars...",
     "weekdays": {
       "full": ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
       "abbr": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -8,12 +9,33 @@
       "full": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     }
   },
+  "config": {
+    "prompt": "Choose a configuration option:",
+    "options": {
+      "calendar_default": "calendar_default",
+      "exclude_calendars": "exclude_calendars",
+      "edit_config": "edit config"
+    },
+    "calendar_default": {
+      "prompt": "Choose the default calendar:",
+      "saved": "✓ Default calendar set to: %{name}"
+    },
+    "exclude_calendars": {
+      "prompt": "Choose calendars whose events block free slots:",
+      "saved": "✓ Exclude calendars set to: %{names}"
+    },
+    "edit": {
+      "failed": "Error: could not open config with %{editor}."
+    }
+  },
   "slots": {
     "no_available": "No available slots found.",
-    "no_calendar": "No calendar found. Run 'flycal calendars' to set a default."
+    "no_calendar": "No calendar found. Run 'flycal config' to set a default."
   },
   "errors": {
     "not_connected": "You are not connected. Run 'flycal login' first.",
-    "duration_positive": "Error: --in must be a positive duration."
+    "duration_positive": "Error: --in must be a positive duration.",
+    "no_calendars": "No calendars found.",
+    "calendar_fetch": "Error in calendar %{calendar}: %{message}"
   }
 }

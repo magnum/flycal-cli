@@ -23,7 +23,7 @@ module FlycalCli
       apply_locale_override
       if Auth.logged_in?
         puts "✓ You are already connected to your Google account."
-        puts "\nRun 'flycal calendars' to set the default calendar."
+        puts "\nRun 'flycal config' to set the default calendar."
         return
       end
 
@@ -41,7 +41,7 @@ module FlycalCli
       begin
         Auth.login
         puts "\n✓ Authentication completed successfully!"
-        puts "\nRun 'flycal calendars' to set the default calendar."
+        puts "\nRun 'flycal config' to set the default calendar."
       rescue FlycalCli::Error => e
         puts "Error: #{e.message}"
         exit 1
@@ -60,49 +60,51 @@ module FlycalCli
       puts "✓ Disconnected successfully."
     end
 
-    desc "calendars", "List available calendars and set the default one"
+    desc "calendars", "List available calendars"
     def calendars
       apply_locale_override
       unless Auth.logged_in?
-        puts "You are not connected. Run 'flycal login' first."
+        puts Locale.t("errors.not_connected")
         exit 1
       end
 
-      creds = Auth.credentials
-      service = CalendarService.new(creds)
+      calendars = load_calendars
+      return if calendars.nil?
 
-      spinner = TTY::Spinner.new("Loading calendars... ", format: :dots)
-      spinner.auto_spin
-      calendars = service.list_calendars
-      spinner.stop("✓")
-
-      if calendars.empty?
-        puts "No calendars found."
-        return
-      end
-
-      # Build selection list (display => calendar_id)
-      default_id = Config.calendar_default
-      choices = calendars.to_h do |cal|
-        primary = cal.primary ? " (primary)" : ""
-        default = (cal.id == default_id) ? " [default]" : ""
+      calendars.each do |cal|
         summary = cal.summary || cal.id
-        label = "#{summary}#{primary}#{default}"
-        [label, cal.id]
+        puts "#{summary} #{cal.id}"
+      end
+    end
+
+    desc "config", "Configure flycal settings"
+    def config
+      apply_locale_override
+      unless Auth.logged_in?
+        puts Locale.t("errors.not_connected")
+        exit 1
       end
 
-      prompt = TTY::Prompt.new
-      selected_id = prompt.select(
-        "Choose the default calendar:",
-        choices,
-        per_page: 15,
-        filter: true
-      )
+      with_config_interrupt_handling do
+        prompt = TTY::Prompt.new
+        choice = prompt.select(
+          Locale.t("config.prompt"),
+          {
+            Locale.t("config.options.calendar_default") => :calendar_default,
+            Locale.t("config.options.exclude_calendars") => :exclude_calendars,
+            Locale.t("config.options.edit_config") => :edit_config
+          },
+          per_page: 10
+        )
 
-      calendar = calendars.find { |c| c.id == selected_id }
-      if calendar
-        Config.calendar_default = calendar.id
-        puts "\n✓ Default calendar set to: #{calendar.summary}"
+        case choice
+        when :calendar_default
+          config_calendar_default
+        when :exclude_calendars
+          config_exclude_calendars
+        when :edit_config
+          config_edit
+        end
       end
     end
 
@@ -198,7 +200,7 @@ module FlycalCli
         time_max = DurationParser.add_to_time(options[:in], time_min)
         slot_cfg = Config.slots_config
         workhours = parse_workhours(slot_cfg["workhours"])
-        weekdays_only = !!slot_cfg["weekdays-only"]
+        weekdays_only = !!slot_cfg["weekdays_only"]
       rescue FlycalCli::Error => e
         puts "Error: #{e.message}"
         exit 1
@@ -212,17 +214,22 @@ module FlycalCli
       creds = Auth.credentials
       service = CalendarService.new(creds)
 
-      calendar_id = resolve_single_calendar_id(service, options[:calendar])
-      if calendar_id.nil?
+      exclude_calendar_ids = resolve_slots_exclude_calendar_ids(service, slot_cfg, options[:calendar])
+      if exclude_calendar_ids.empty?
         puts Locale.t("slots.no_calendar")
         exit 1
       end
 
-      events = service.list_events(
-        calendar_id,
-        time_min: time_min,
-        time_max: time_max
-      )
+      events = exclude_calendar_ids.flat_map do |calendar_id|
+        service.list_events(
+          calendar_id,
+          time_min: time_min,
+          time_max: time_max
+        )
+      rescue Google::Apis::Errors::Error => e
+        warn Locale.t("errors.calendar_fetch", calendar: calendar_id, message: e.message)
+        []
+      end
 
       finder = SlotFinder.new(
         events: events,
@@ -264,8 +271,145 @@ module FlycalCli
       "\e[1m#{str}\e[0m"
     end
 
+    def bold_underline(str)
+      "\e[1;4m#{str}\e[0m"
+    end
+
     def apply_locale_override
       Locale.override!(options[:locale])
+    end
+
+    def with_config_interrupt_handling
+      yield
+    rescue Interrupt
+      puts "\nconfig cancelled..."
+      exit 0
+    end
+
+    def load_calendars
+      creds = Auth.credentials
+      service = CalendarService.new(creds)
+
+      spinner = TTY::Spinner.new("#{Locale.t('common.loading_calendars')} ", format: :dots)
+      spinner.auto_spin
+      calendars = service.list_calendars
+      spinner.stop("✓")
+
+      if calendars.empty?
+        puts Locale.t("errors.no_calendars")
+        return nil
+      end
+
+      calendars
+    end
+
+    def calendar_choices(calendars, highlight_ids: [])
+      highlights = Array(highlight_ids).compact
+      calendars.to_h do |cal|
+        primary = cal.primary ? " (primary)" : ""
+        summary = cal.summary || cal.id
+        label = "#{summary}#{primary}"
+        label = bold_underline(label) if highlights.include?(cal.id)
+        [label, cal.id]
+      end
+    end
+
+    def config_calendar_default
+      calendars = load_calendars
+      return if calendars.nil?
+
+      prompt = TTY::Prompt.new
+      default_id = Config.calendar_default
+      selected_id = prompt.select(
+        Locale.t("config.calendar_default.prompt"),
+        calendar_choices(calendars, highlight_ids: [default_id]),
+        per_page: 15,
+        filter: true
+      )
+
+      calendar = calendars.find { |c| c.id == selected_id }
+      return unless calendar
+
+      Config.calendar_default = calendar.id
+      puts Locale.t("config.calendar_default.saved", name: calendar.summary || calendar.id)
+    end
+
+    def config_exclude_calendars
+      calendars = load_calendars
+      return if calendars.nil?
+
+      prompt = TTY::Prompt.new
+      default_id = Config.calendar_default
+      configured = Config.exclude_calendars
+      current_ids = resolve_calendar_refs(calendars, configured)
+      preselected = current_ids.empty? && default_id ? [default_id] : current_ids
+
+      selected_ids = prompt.multi_select(
+        Locale.t("config.exclude_calendars.prompt"),
+        calendar_choices(calendars, highlight_ids: current_ids),
+        default: preselected,
+        min: 1,
+        per_page: 15,
+        filter: true
+      )
+
+      Config.exclude_calendars = selected_ids
+      names = selected_ids.map do |id|
+        calendars.find { |c| c.id == id }&.summary || id
+      end
+      puts Locale.t("config.exclude_calendars.saved", names: names.join(", "))
+    end
+
+    def config_edit
+      editor = ENV["EDITOR"].to_s.strip
+      editor = "vi" if editor.empty?
+
+      success = system(editor, Config.config_file)
+      puts Locale.t("config.edit.failed", editor: editor) unless success
+    end
+
+    def resolve_calendar_refs(calendars, refs)
+      Array(refs).filter_map do |ref|
+        resolve_calendar_ref(calendars, ref)
+      end.uniq
+    end
+
+    def resolve_calendar_ref(calendars, ref)
+      ref = ref.to_s.strip
+      return nil if ref.empty?
+
+      exact = calendars.find { |cal| cal.id == ref }
+      return exact.id if exact
+
+      matches = calendars.select do |cal|
+        cal.id == ref ||
+          (cal.summary && cal.summary.downcase.include?(ref.downcase))
+      end
+
+      matches.first&.id
+    end
+
+    def resolve_slots_exclude_calendar_ids(service, slot_cfg, calendar_override)
+      configured = slot_cfg["exclude_calendars"]
+      calendars = service.list_calendars
+
+      refs = if configured.nil? || (configured.is_a?(Array) && configured.empty?)
+               fallback = calendar_override || Config.calendar_default
+               fallback ? [fallback] : []
+             else
+               configured
+             end
+
+      ids = resolve_calendar_refs(calendars, refs)
+      return ids unless ids.empty?
+
+      fallback = calendar_override || Config.calendar_default
+      if fallback
+        resolve_calendar_refs(calendars, [fallback])
+      else
+        primary = calendars.find(&:primary)
+        primary ? [primary.id] : calendars.first(1).map(&:id)
+      end
     end
 
     def parse_datetime(str, end_of_day: false)
@@ -369,22 +513,6 @@ module FlycalCli
       end
 
       matches.map(&:id)
-    end
-
-    def resolve_single_calendar_id(service, calendar_name)
-      if calendar_name && !calendar_name.empty?
-        ids = resolve_calendar_ids(service, calendar_name)
-        return ids.first
-      end
-
-      default_id = Config.calendar_default
-      return default_id if default_id
-
-      calendars = service.list_calendars
-      primary = calendars.find(&:primary)
-      return primary.id if primary
-
-      calendars.first&.id
     end
 
     def print_events(service, events)

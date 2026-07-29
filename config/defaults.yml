@@ -1,6 +1,7 @@
 locale: en
 slots:
+  exclude_calendars: []
   workhours:
     - 9:30-13:00
     - 14:00-18:30
-  weekdays-only: true
+  weekdays_only: true

@@ -54,7 +54,7 @@ Connect to your Google account. Opens a browser for OAuth authentication when no
 flycal login
 ```
 
-If already connected, the command reports the current status and suggests running `flycal calendars` to set the default calendar.
+If already connected, the command reports the current status and suggests running `flycal config` to set the default calendar.
 
 ### logout
 
@@ -84,11 +84,34 @@ flycal -v
 
 ### calendars
 
-List available calendars and set the default one. Uses an interactive scrollable menu (arrow keys to navigate, type to filter).
+List available calendars with name and ID.
 
 ```bash
 flycal calendars
 ```
+
+Example output:
+
+```
+Work user@example.com
+Personal user@gmail.com
+```
+
+### config
+
+Interactive configuration menu.
+
+```bash
+flycal config
+```
+
+Options:
+
+- `calendar_default` — choose the default calendar and save it to `~/.flycal/config.yml`
+- `exclude_calendars` — multi-select one or more calendars whose events block free slots (default selection includes the current default calendar)
+- `edit config` — open `~/.flycal/config.yml` with `$EDITOR` (or `vi`)
+
+Press Ctrl+C during configuration to cancel without error (`config cancelled...`).
 
 The default calendar is used by the search command when no calendar is specified.
 
@@ -108,7 +131,7 @@ flycal search -i 2months -d placeholder
 - `--from` / `-f` — Start date/time. Default: midnight of current day. Format: `2025-01-01` or `2025-01-01T09:00`
 - `--to` / `-t` — End date/time. Default: 23:59 of the 30th day from today. Format: same as `--from`
 - `--in` / `-i` — Duration from `--from`, overrides `--to`. Format: `30days`, `48hours`, `2months`, `1year` (no space). With space use quotes: `--in "30 days"`
-- `--calendar` / `-c` — Calendar name or ID. Default: calendar set via `flycal calendars`
+- `--calendar` / `-c` — Calendar name or ID. Default: calendar set via `flycal config`
 - `--description` / `-d` — Filter events by text. Matches events where the string appears in title or description (case-insensitive, contains)
 
 **Time range behavior:**
@@ -142,24 +165,28 @@ flycal slots --in "48 hours" --duration 1hour -c Work
 
 - `--duration` — Minimum slot length. Examples: `1h`, `1 hour`, `30 minutes`, `90min`
 - `--in` / `-i` — Search window from now. Examples: `3 days`, `1 week`, `48 hours` (use quotes when the value contains a space)
-- `--calendar` / `-c` — Calendar name or ID (optional; uses default calendar)
+- `--calendar` / `-c` — Calendar name or ID used as fallback when `exclude_calendars` is not configured
 
 Slot search windows are configured in `~/.flycal/config.yml`:
 
 ```yaml
 slots:
+  exclude_calendars:
+    - user@example.com
+    - user@gmail.com
   workhours:
     - 9:30-13:00
     - 14:00-18:30
-  weekdays-only: true
+  weekdays_only: true
 locale: en
 ```
 
 Missing keys are filled from `config/defaults.yml` in the gem and saved to your `config.yml` on first read.
 
+- `exclude_calendars` lists calendars whose events block free slots; if empty or not set, events from `calendar_default` are used
 - `workhours` accepts one or more ranges (`H-H`, `HH:MM-HH:MM`, mixed)
-- `weekdays-only: true` limits slots to Monday-Friday
-- `weekdays-only: false` includes weekends
+- `weekdays_only: true` limits slots to Monday-Friday
+- `weekdays_only: false` includes weekends
 - `locale` supports `en` and `it` (default is `en`)
 
 **Output example:**
