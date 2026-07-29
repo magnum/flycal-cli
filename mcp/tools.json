@@ -256,7 +256,7 @@
     {
       "name": "flycal_slots",
       "title": "Find free time slots",
-      "description": "Find free slots within configured hours, subtracting busy events from slots.exclude_calendars (or calendar_default if that list is empty). Starts from --from (default: config slots.defaults.from or now) for a window of --in (default: 1 week). Duration defaults to slots.defaults.default_duration (45min). Respects free_before and free_after buffers from config. Output begins with a multi-line header, calendar names, a Google Calendar day link, then fixed-duration slots. Read-only.",
+      "description": "Find free slots within configured hours, subtracting busy events from slots.exclude_calendars (or calendar_default if that list is empty). Starts from --from (default: config slots.defaults.from or now) for a window of --in (default: 1 week). Duration defaults to slots.defaults.default_duration (45min). Respects free_before and free_after buffers from config. Output begins with a multi-line header, calendar names, a Google Calendar day link, then continuous free ranges (each at least as long as duration). Read-only.",
       "interactive": false,
       "requires_auth": true,
       "command": {

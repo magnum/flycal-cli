@@ -19,7 +19,7 @@
 - In `flycal config`, the current default calendar and already-selected exclude calendars are shown bold and underlined
 - Slot search subtracts busy time from all calendars listed in `exclude_calendars`
 - `flycal slots --in` defaults to `1 week`; `--duration` is optional (defaults from config)
-- `flycal slots` uses `free_before` / `free_after` buffers and reports fixed-duration slots
+- `flycal slots` uses `free_before` / `free_after` buffers and reports continuous free ranges (aggregated), each at least as long as `--duration`
 - `flycal slots` prints a header with duration/window and clickable Google Calendar links before availability
 
 ### Fixed

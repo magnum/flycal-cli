@@ -142,16 +142,13 @@ module FlycalCli
     end
 
     def slots_in_gap(start_at, end_at)
-      slots = []
-      cursor = round_up_15(start_at)
-      gap_limit = round_down_15(end_at)
+      rounded_start = round_up_15(start_at)
+      rounded_end = round_down_15(end_at)
+      return [] if rounded_start >= rounded_end
+      return [] if (rounded_end - rounded_start) < @slot_duration_seconds
 
-      while cursor + @slot_duration_seconds <= gap_limit
-        slots << [cursor, cursor + @slot_duration_seconds]
-        cursor += STEP_SECONDS
-      end
-
-      slots
+      # One continuous free range (not sliding windows of fixed duration)
+      [[rounded_start, rounded_end]]
     end
 
     def round_up_15(time)
