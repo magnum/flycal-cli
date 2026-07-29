@@ -93,6 +93,11 @@ module FlycalCli
           changed = true
         end
 
+        if normalized.key?("workhours") && !normalized.key?("hours")
+          normalized["hours"] = normalized.delete("workhours")
+          changed = true
+        end
+
         return [data, false] unless changed
 
         data = data.dup

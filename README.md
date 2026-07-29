@@ -156,20 +156,18 @@ For time frames longer than 7 days, a weekly breakdown is added (week number, st
 Find free time slots in your calendar. Output is a simple list for copy/paste into email or other tools.
 
 ```bash
+flycal slots
 flycal slots --duration 1h
 flycal slots --from 2026-08-01 --in "2 weeks" --duration 1h
 flycal slots --from 01/08/2026 --in 3days --duration 30min
-flycal slots --in 1week --duration 30min -c Work
+flycal slots --in 1week -c Work
 ```
 
 **Options:**
 
-- `--duration` — Minimum slot length. Examples: `1h`, `1 hour`, `30 minutes`, `90min` (required)
-- `--from` / `-f` — Start date/time. Default: now. If a date without time is today, starts from the current time. Formats:
-  - always: `YYYY-MM-DD`, `YYYY/MM/DD`, optional time (`YYYY-MM-DDTHH:MM`)
-  - locale `it`: also `DD-MM-YYYY` / `DD/MM/YYYY`
-  - locale `en`: also `MM-DD-YYYY` / `MM/DD/YYYY`
-- `--in` / `-i` — Search window from `--from`. Default: `1 week`. Examples: `3 days`, `1 week`, `48 hours`
+- `--duration` — Slot length. Default: `slots.defaults.default_duration` in config (`45min`). Examples: `1h`, `30 minutes`
+- `--from` / `-f` — Start date/time. Default: `slots.defaults.from` in config (`now`). If a date without time is today, starts from the current time.
+- `--in` / `-i` — Search window from `--from`. Default: `1 week`.
 - `--calendar` / `-c` — Calendar name or ID used as fallback when `exclude_calendars` is not configured
 
 **Output:**
@@ -177,23 +175,34 @@ flycal slots --in 1week --duration 30min -c Work
 Always starts with a header and clickable calendar links (OSC 8), then the availability list:
 
 ```
-slots in 1 week with min duration 1h, for calendars
+found 3 slots
+from wed 29 July 2026 to wed 5 August 2026
+with duration 45min
+for calendars
 Incode - Antonio
 Personal
+https://calendar.google.com/calendar/r/day/2026/7/29
 
 friday 15/7
 10-12
 13-15.30
 ```
 
+If `pbcopy` is available (macOS), the slot list without the header is also copied to the clipboard.
+
 Slot search windows are configured in `~/.flycal/config.yml`:
 
 ```yaml
 slots:
+  defaults:
+    from: now
+    default_duration: 45min
+  free_before: 0m
+  free_after: 15m
   exclude_calendars:
     - user@example.com
     - user@gmail.com
-  workhours:
+  hours:
     - 9:30-13:00
     - 14:00-18:30
   weekdays_only: true
@@ -202,8 +211,12 @@ locale: en
 
 Missing keys are filled from `config/defaults.yml` in the gem and saved to your `config.yml` on first read.
 
+- `defaults.from` — default `--from` for slots (`now` or a date string)
+- `defaults.default_duration` — default slot length when `--duration` is omitted
+- `free_before` — buffer before each slot; busy intervals are extended backward so no event may fall in this window before a slot
+- `free_after` — buffer after each slot; gaps must fit `duration + free_after`, but output shows slots of `duration` only
 - `exclude_calendars` lists calendars whose events block free slots; if empty or not set, events from `calendar_default` are used
-- `workhours` accepts one or more ranges (`H-H`, `HH:MM-HH:MM`, mixed)
+- `hours` accepts one or more ranges (`H-H`, `HH:MM-HH:MM`, mixed)
 - `weekdays_only: true` limits slots to Monday-Friday
 - `weekdays_only: false` includes weekends
 - `locale` supports `en` and `it` (default is `en`)

@@ -31,7 +31,8 @@
   "slots": {
     "no_available": "No available slots found.",
     "no_calendar": "No calendar found. Run 'flycal config' to set a default.",
-    "header": "slots in %{in} with min duration %{duration}, for calendars"
+    "header": "found %{count} slots\nfrom %{from} to %{to}\nwith duration %{duration}\nfor calendars",
+    "copied_to_clipboard": "✓ Slot list copied to clipboard (pbcopy)"
   },
   "errors": {
     "not_connected": "You are not connected. Run 'flycal login' first.",

@@ -1,16 +1,21 @@
 # frozen_string_literal: true
 
-require "cgi"
-
 module FlycalCli
   class SlotFormatter
     class << self
-      def format_header(in_value:, duration:, calendars:)
+      def format_header(from:, to:, duration:, calendars:, count:)
         lines = []
-        lines << Locale.t("slots.header", in: in_value, duration: duration)
+        lines << Locale.t(
+          "slots.header",
+          count: count,
+          from: underline(Locale.format_long_date(from)),
+          to: underline(Locale.format_long_date(to)),
+          duration: underline(duration)
+        )
         calendars.each do |cal|
-          lines << calendar_link(cal[:name], cal[:id])
+          lines << cal[:name].to_s
         end
+        lines << google_calendar_day_url(from)
         lines.join("\n")
       end
 
@@ -30,10 +35,13 @@ module FlycalCli
 
       private
 
-      def calendar_link(name, calendar_id)
-        url = "https://calendar.google.com/calendar/r?cid=#{CGI.escape(calendar_id.to_s)}"
-        # OSC 8 hyperlink (clickable in modern terminals)
-        "\e]8;;#{url}\a#{name}\e]8;;\a"
+      def underline(str)
+        "\e[4m#{str}\e[0m"
+      end
+
+      def google_calendar_day_url(from)
+        t = from.respond_to?(:to_time) ? from.to_time : from
+        "https://calendar.google.com/calendar/r/day/#{t.year}/#{t.month}/#{t.day}"
       end
 
       def day_header(date)

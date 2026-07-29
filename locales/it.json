@@ -31,7 +31,8 @@
   "slots": {
     "no_available": "Nessuno slot disponibile.",
     "no_calendar": "Nessun calendario trovato. Esegui 'flycal config' per impostare il predefinito.",
-    "header": "slot in %{in} con durata minima %{duration}, per i calendari"
+    "header": "trovati %{count} slot\nda %{from} a %{to}\ncon durata %{duration}\nper i calendari",
+    "copied_to_clipboard": "✓ Lista slot copiata negli appunti (pbcopy)"
   },
   "errors": {
     "not_connected": "Non sei connesso. Esegui prima 'flycal login'.",

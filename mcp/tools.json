@@ -25,10 +25,26 @@
         "enum": ["en", "it"],
         "description": "Default CLI locale"
       },
-      "slots.workhours": {
+      "slots.hours": {
         "type": "array",
         "items": { "type": "string" },
-        "description": "Work-hour ranges used by slots, e.g. [\"9:30-13:00\", \"14:00-18:30\"]"
+        "description": "Slot search hour ranges, e.g. [\"9:30-13:00\", \"14:00-18:30\"]"
+      },
+      "slots.defaults.from": {
+        "type": "string",
+        "description": "Default --from for slots (e.g. now or a date string)"
+      },
+      "slots.defaults.default_duration": {
+        "type": "string",
+        "description": "Default slot duration when --duration is omitted (e.g. 45min)"
+      },
+      "slots.free_before": {
+        "type": "string",
+        "description": "Buffer before each slot; events block this window before slot start"
+      },
+      "slots.free_after": {
+        "type": "string",
+        "description": "Buffer after each slot; gaps must fit duration + free_after"
       },
       "slots.weekdays_only": {
         "type": "boolean",
@@ -240,12 +256,12 @@
     {
       "name": "flycal_slots",
       "title": "Find free time slots",
-      "description": "Find free slots within configured workhours, subtracting busy events from slots.exclude_calendars (or calendar_default if that list is empty). Starts from --from (default: now) for a window of --in (default: 1 week). Output begins with a header and clickable Google Calendar links, then a copy-paste friendly day list. Times rounded to 15 minutes. Read-only.",
+      "description": "Find free slots within configured hours, subtracting busy events from slots.exclude_calendars (or calendar_default if that list is empty). Starts from --from (default: config slots.defaults.from or now) for a window of --in (default: 1 week). Duration defaults to slots.defaults.default_duration (45min). Respects free_before and free_after buffers from config. Output begins with a multi-line header, calendar names, a Google Calendar day link, then fixed-duration slots. Read-only.",
       "interactive": false,
       "requires_auth": true,
       "command": {
         "argv_template": ["flycal", "slots"],
-        "required_options": ["duration"],
+        "required_options": [],
         "option_map": {
           "duration": ["--duration", "{value}"],
           "from": ["--from", "{value}"],
@@ -254,24 +270,23 @@
           "locale": ["--locale", "{value}"]
         },
         "examples": [
+          ["flycal", "slots"],
           ["flycal", "slots", "--duration", "1h"],
-          ["flycal", "slots", "--from", "2026-08-01", "--in", "2 weeks", "--duration", "1h"],
-          ["flycal", "slots", "--in", "3 days", "--duration", "1h"],
-          ["flycal", "slots", "--in", "1week", "--duration", "30min"]
+          ["flycal", "slots", "--from", "2026-08-01", "--in", "2 weeks", "--duration", "1h"]
         ]
       },
       "output": {
         "format": "text/plain",
-        "example": "slots in 1 week with min duration 1h, for calendars\nWork\n\nfriday 15/7\n10-12\n13-15.30\n\nmonday 21/7\n12-13\n14-15"
+        "example": "found 3 slots\nfrom wed 29 July 2026 to wed 5 August 2026\nwith duration 45min\nfor calendars\nWork\nhttps://calendar.google.com/calendar/r/day/2026/7/29\n\nfriday 15/7\n10-12\n13-15.30"
       },
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["duration"],
+        "required": [],
         "properties": {
           "duration": {
             "type": "string",
-            "description": "Minimum slot length. Examples: 1h, 1 hour, 30 minutes, 90min."
+            "description": "Slot length. Default from config slots.defaults.default_duration (45min)."
           },
           "from": {
             "type": "string",

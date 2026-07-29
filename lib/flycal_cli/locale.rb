@@ -31,6 +31,12 @@ module FlycalCli
       months[idx] || date_or_time.strftime("%B")
     end
 
+    def format_long_date(date_or_time)
+      t = date_or_time.respond_to?(:to_time) ? date_or_time.to_time : date_or_time
+      d = t.to_date
+      "#{day_abbr(d).downcase} #{d.day} #{month_name(d)} #{d.year}"
+    end
+
     def current_locale
       Thread.current[:flycal_locale_override] || Config.locale
     rescue StandardError

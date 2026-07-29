@@ -3,6 +3,7 @@
 module FlycalCli
   class SlotFinder
     DEFAULT_WORKHOURS = [[9, 0, 18, 0]].freeze
+    STEP_SECONDS = 900
 
     def initialize(
       events:,
@@ -10,7 +11,9 @@ module FlycalCli
       time_max:,
       slot_duration_seconds:,
       workhours: DEFAULT_WORKHOURS,
-      weekdays_only: true
+      weekdays_only: true,
+      free_before_seconds: 0,
+      free_after_seconds: 0
     )
       @events = events
       @time_min = time_min
@@ -18,6 +21,8 @@ module FlycalCli
       @slot_duration_seconds = slot_duration_seconds
       @workhours = workhours
       @weekdays_only = weekdays_only
+      @free_before_seconds = free_before_seconds
+      @free_after_seconds = free_after_seconds
     end
 
     def slots_by_day
@@ -30,7 +35,9 @@ module FlycalCli
 
           busy = busy_intervals_for(date, day_start, day_end)
           gaps = free_gaps(day_start, day_end, busy)
-          slots.concat(gaps.filter_map { |start_at, end_at| slot_if_fits(start_at, end_at) })
+          gaps.each do |gap_start, gap_end|
+            slots.concat(slots_in_gap(gap_start, gap_end))
+          end
         end
         result[date] = slots unless slots.empty?
       end
@@ -74,7 +81,14 @@ module FlycalCli
       intervals = @events.filter_map do |event|
         interval_for_event(event, date, day_start, day_end)
       end
-      merge_intervals(intervals)
+      merge_intervals(intervals.map { |start_at, end_at| pad_busy_interval(start_at, end_at) })
+    end
+
+    def pad_busy_interval(start_at, end_at)
+      [
+        start_at - @free_before_seconds,
+        end_at + @free_after_seconds
+      ]
     end
 
     def interval_for_event(event, date, day_start, day_end)
@@ -127,26 +141,30 @@ module FlycalCli
       gaps
     end
 
-    def slot_if_fits(start_at, end_at)
-      rounded_start = round_up_15(start_at)
-      rounded_end = round_down_15(end_at)
-      return nil if rounded_start >= rounded_end
-      return nil if (rounded_end - rounded_start) < @slot_duration_seconds
+    def slots_in_gap(start_at, end_at)
+      slots = []
+      cursor = round_up_15(start_at)
+      gap_limit = round_down_15(end_at)
 
-      [rounded_start, rounded_end]
+      while cursor + @slot_duration_seconds <= gap_limit
+        slots << [cursor, cursor + @slot_duration_seconds]
+        cursor += STEP_SECONDS
+      end
+
+      slots
     end
 
     def round_up_15(time)
       sec = time.to_i
-      remainder = sec % 900
+      remainder = sec % STEP_SECONDS
       return time if remainder.zero?
 
-      Time.at(sec + (900 - remainder))
+      Time.at(sec + (STEP_SECONDS - remainder))
     end
 
     def round_down_15(time)
       sec = time.to_i
-      Time.at(sec - (sec % 900))
+      Time.at(sec - (sec % STEP_SECONDS))
     end
 
     def to_time(value)

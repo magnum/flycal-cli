@@ -179,20 +179,21 @@ module FlycalCli
       List free time slots long enough for a given duration.
 
       Defaults:
-        --from  now
-        --in    1 week
+        --from      from config (default: now)
+        --in        1 week
+        --duration  from config (default: 45min)
 
       Examples:
+        flycal slots
         flycal slots --duration 1h
         flycal slots --from 2026-08-01 --in "2 weeks" --duration 1h
-        flycal slots --from 01/08/2026 --in 3days --duration 30min
     LONGDESC
-    option :duration, type: :string, required: true,
-           desc: "Minimum slot length (e.g. 1h, 30 minutes, 1 hour)"
+    option :duration, type: :string,
+           desc: "Slot length (default from config: slots.defaults.default_duration)"
     option :in, type: :string, aliases: "-i", default: "1 week",
            desc: "Search window from --from (default: 1 week)"
     option :from, type: :string, aliases: "-f",
-           desc: "Start date/time (default: now). Formats: YYYY-MM-DD, locale date, or with time"
+           desc: "Start date/time (default from config: slots.defaults.from)"
     option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"
     def slots
       apply_locale_override
@@ -201,15 +202,26 @@ module FlycalCli
         exit 1
       end
 
+      slot_cfg = Config.slots_config
+      defaults = slot_cfg.fetch("defaults", {})
       in_value = options[:in].to_s.strip
       in_value = "1 week" if in_value.empty?
 
+      duration_value = options[:duration].to_s.strip
+      duration_value = defaults["default_duration"].to_s.strip if duration_value.empty?
+      duration_value = "45min" if duration_value.empty?
+
+      from_value = options[:from].to_s.strip
+      from_value = defaults["from"].to_s.strip if from_value.empty?
+      from_value = "now" if from_value.empty?
+
       begin
-        slot_duration = DurationParser.to_seconds(options[:duration])
-        time_min = DateTimeParser.parse_or_default(options[:from], default: Time.now)
+        slot_duration = DurationParser.to_seconds(duration_value)
+        free_before = DurationParser.to_seconds(slot_cfg["free_before"] || "0m")
+        free_after = DurationParser.to_seconds(slot_cfg["free_after"] || "0m")
+        time_min = parse_slots_from(from_value)
         time_max = DurationParser.add_to_time(in_value, time_min)
-        slot_cfg = Config.slots_config
-        workhours = parse_workhours(slot_cfg["workhours"])
+        workhours = parse_workhours(slot_cfg["hours"])
         weekdays_only = !!slot_cfg["weekdays_only"]
       rescue FlycalCli::Error => e
         puts "Error: #{e.message}"
@@ -237,10 +249,11 @@ module FlycalCli
         { id: id, name: name }
       end
 
+      fetch_from = time_min - free_before
       events = exclude_calendar_ids.flat_map do |calendar_id|
         service.list_events(
           calendar_id,
-          time_min: time_min,
+          time_min: fetch_from,
           time_max: time_max
         )
       rescue Google::Apis::Errors::Error => e
@@ -254,18 +267,28 @@ module FlycalCli
         time_max: time_max,
         slot_duration_seconds: slot_duration,
         workhours: workhours,
-        weekdays_only: weekdays_only
+        weekdays_only: weekdays_only,
+        free_before_seconds: free_before,
+        free_after_seconds: free_after
       )
 
       slots_by_day = finder.slots_by_day
+      slot_count = slots_by_day.values.sum(&:size)
       puts SlotFormatter.format_header(
-        in_value: in_value,
-        duration: options[:duration],
-        calendars: calendar_meta
+        from: time_min,
+        to: time_max,
+        duration: duration_value,
+        calendars: calendar_meta,
+        count: slot_count
       )
       puts ""
       output = SlotFormatter.format_output(slots_by_day)
-      puts output.empty? ? Locale.t("slots.no_available") : output
+      if output.empty?
+        puts Locale.t("slots.no_available")
+      else
+        puts output
+        copy_slots_to_clipboard(output)
+      end
     end
 
     desc "update", "Update flycal-cli to the latest gem version"
@@ -443,6 +466,26 @@ module FlycalCli
       end
     end
 
+    def parse_slots_from(value)
+      return Time.now if value.to_s.strip.downcase == "now"
+
+      DateTimeParser.parse(value)
+    end
+
+    def copy_slots_to_clipboard(text)
+      return unless pbcopy_available?
+
+      IO.popen("pbcopy", "w") { |io| io.write(text) }
+      puts ""
+      puts Locale.t("slots.copied_to_clipboard")
+    rescue StandardError
+      nil
+    end
+
+    def pbcopy_available?
+      system("which", "pbcopy", out: File::NULL, err: File::NULL)
+    end
+
     def parse_hour_minute(value)
       match = value.to_s.strip.match(/\A(\d{1,2}):(\d{2})\z/)
       raise FlycalCli::Error, "Invalid time format #{value.inspect}. Use HH:MM (e.g. 9:00, 18:30)." unless match
@@ -459,18 +502,18 @@ module FlycalCli
     def parse_workhours(values)
       ranges = Array(values).map do |item|
         start_str, end_str = item.to_s.strip.split("-", 2)
-        raise FlycalCli::Error, "Invalid workhours item #{item.inspect}. Use format like '9-13' or '14:30-18:00'." if start_str.nil? || end_str.nil?
+        raise FlycalCli::Error, "Invalid hours item #{item.inspect}. Use format like '9-13' or '14:30-18:00'." if start_str.nil? || end_str.nil?
 
         sh, sm = parse_hour_minute_flexible(start_str)
         eh, em = parse_hour_minute_flexible(end_str)
         start_minutes = (sh * 60) + sm
         end_minutes = (eh * 60) + em
-        raise FlycalCli::Error, "Invalid workhours range #{item.inspect}: end must be after start." if end_minutes <= start_minutes
+        raise FlycalCli::Error, "Invalid hours range #{item.inspect}: end must be after start." if end_minutes <= start_minutes
 
         [sh, sm, eh, em]
       end
 
-      raise FlycalCli::Error, "slots.workhours cannot be empty in config.yml." if ranges.empty?
+      raise FlycalCli::Error, "slots.hours cannot be empty in config.yml." if ranges.empty?
 
       ranges.sort_by { |sh, sm, _eh, _em| (sh * 60) + sm }
     end

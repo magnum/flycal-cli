@@ -1,7 +1,12 @@
 locale: en
 slots:
+  defaults:
+    from: now
+    default_duration: 45min
+  free_before: 0m
+  free_after: 15m
   exclude_calendars: []
-  workhours:
+  hours:
     - 9:30-13:00
     - 14:00-18:30
   weekdays_only: true
