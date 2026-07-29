@@ -103,6 +103,37 @@ The summary shows:
 
 For time frames longer than 7 days, a weekly breakdown is added (week number, start/end dates, hours, working days per week). For time frames longer than 30 days, a monthly breakdown is shown instead (month number, month name, hours, working days per month).
 
+### slots
+
+Find free time slots in your calendar (weekdays, 9:00–18:00). Output is a simple list for copy/paste into email or other tools.
+
+```bash
+flycal slots --in "3 days" --duration 1h
+flycal slots --in 1week --duration 30min
+flycal slots --in "48 hours" --duration 1hour -c Work
+```
+
+**Options:**
+
+- `--duration` — Minimum slot length. Examples: `1h`, `1 hour`, `30 minutes`, `90min`
+- `--in` / `-i` — Search window from now. Examples: `3 days`, `1 week`, `48 hours` (use quotes when the value contains a space)
+- `--calendar` / `-c` — Calendar name or ID (optional; uses default calendar)
+- `--workday-start` — Start of slot search window per day, format `HH:MM` (default: `9:00`)
+- `--workday-end` — End of slot search window per day, format `HH:MM` (default: `18:00`)
+- `--weekdays-only` — Restrict results to Monday-Friday (default: `true`)
+
+**Output example:**
+
+```
+friday 15/7
+10-12
+13-15.30
+
+monday 21/7
+12-13
+14-15
+```
+
 ## Configuration
 
 Data is stored in `~/.flycal/`:

@@ -167,6 +167,84 @@ module FlycalCli
       print_search_summary(events, time_min: time_min, time_max: time_max)
     end
 
+    desc "slots", "Find available time slots in your calendar"
+    long_desc <<-LONGDESC
+      List free time slots long enough for a given duration.
+
+      Examples:
+        flycal slots --in "3 days" --duration 1h
+        flycal slots --in 1week --duration 30min -c Work
+    LONGDESC
+    option :duration, type: :string, required: true,
+           desc: "Minimum slot length (e.g. 1h, 30 minutes, 1 hour)"
+    option :in, type: :string, aliases: "-i", required: true,
+           desc: "Search window from now (e.g. 3 days, 1 week, 48 hours)"
+    option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"
+    option :workday_start, type: :string, default: "9:00",
+           desc: "Workday start time HH:MM (default: 9:00)"
+    option :workday_end, type: :string, default: "18:00",
+           desc: "Workday end time HH:MM (default: 18:00)"
+    option :weekdays_only, type: :boolean, default: true,
+           desc: "Limit slots to Monday-Friday (default: true)"
+    def slots
+      unless Auth.logged_in?
+        puts "You are not connected. Run 'flycal login' first."
+        exit 1
+      end
+
+      begin
+        slot_duration = DurationParser.to_seconds(options[:duration])
+        time_min = Time.now
+        time_max = DurationParser.add_to_time(options[:in], time_min)
+        workday_start_hour, workday_start_min = parse_hour_minute(options[:workday_start])
+        workday_end_hour, workday_end_min = parse_hour_minute(options[:workday_end])
+      rescue FlycalCli::Error => e
+        puts "Error: #{e.message}"
+        exit 1
+      end
+
+      if time_min >= time_max
+        puts "Error: --in must be a positive duration."
+        exit 1
+      end
+      start_minutes = (workday_start_hour * 60) + workday_start_min
+      end_minutes = (workday_end_hour * 60) + workday_end_min
+      if end_minutes <= start_minutes
+        puts "Error: --workday-end must be later than --workday-start."
+        exit 1
+      end
+
+      creds = Auth.credentials
+      service = CalendarService.new(creds)
+
+      calendar_id = resolve_single_calendar_id(service, options[:calendar])
+      if calendar_id.nil?
+        puts "No calendar found. Run 'flycal calendars' to set a default."
+        exit 1
+      end
+
+      events = service.list_events(
+        calendar_id,
+        time_min: time_min,
+        time_max: time_max
+      )
+
+      finder = SlotFinder.new(
+        events: events,
+        time_min: time_min,
+        time_max: time_max,
+        slot_duration_seconds: slot_duration,
+        workday_start_hour: workday_start_hour,
+        workday_start_min: workday_start_min,
+        workday_end_hour: workday_end_hour,
+        workday_end_min: workday_end_min,
+        weekdays_only: options[:weekdays_only]
+      )
+
+      output = SlotFormatter.format_output(finder.slots_by_day)
+      puts output.empty? ? "No available slots found." : output
+    end
+
     default_task :help
 
     private
@@ -211,6 +289,19 @@ module FlycalCli
       end
     end
 
+    def parse_hour_minute(value)
+      match = value.to_s.strip.match(/\A(\d{1,2}):(\d{2})\z/)
+      raise FlycalCli::Error, "Invalid time format #{value.inspect}. Use HH:MM (e.g. 9:00, 18:30)." unless match
+
+      hour = match[1].to_i
+      minute = match[2].to_i
+      unless hour.between?(0, 23) && minute.between?(0, 59)
+        raise FlycalCli::Error, "Invalid time #{value.inspect}. Hour must be 0-23 and minute 0-59."
+      end
+
+      [hour, minute]
+    end
+
     def resolve_calendar_ids(service, calendar_name)
       calendar_lists = service.list_calendars
 
@@ -234,6 +325,22 @@ module FlycalCli
       end
 
       matches.map(&:id)
+    end
+
+    def resolve_single_calendar_id(service, calendar_name)
+      if calendar_name && !calendar_name.empty?
+        ids = resolve_calendar_ids(service, calendar_name)
+        return ids.first
+      end
+
+      default_id = Config.calendar_default
+      return default_id if default_id
+
+      calendars = service.list_calendars
+      primary = calendars.find(&:primary)
+      return primary.id if primary
+
+      calendars.first&.id
     end
 
     def print_events(service, events)

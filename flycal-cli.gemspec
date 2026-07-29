@@ -26,6 +26,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'activesupport', '>= 6.0'
+  spec.add_dependency 'pstore', '>= 0.1'
   spec.add_dependency 'google-apis-calendar_v3', '~> 0.51'
   spec.add_dependency 'googleauth', '~> 1.8'
   spec.add_dependency 'thor', '~> 1.3'
