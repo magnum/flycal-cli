@@ -79,15 +79,14 @@ new_version = prompt("New version [#{proposed_version}]: ", default: proposed_ve
 abort_with("Invalid version: #{new_version.inspect}") unless valid_version?(new_version)
 
 if new_version == current_version
-  puts "Version unchanged (#{current_version}). Nothing to do."
-  exit 0
+  puts "Version unchanged (#{current_version}). Proceeding with release of existing version."
+else
+  write_version(new_version)
+  puts "Updated #{VERSION_FILE} -> #{new_version}"
+
+  run!(["git", "add", VERSION_FILE])
+  run!(["git", "commit", "-m", "Release version #{new_version}."])
 end
-
-write_version(new_version)
-puts "Updated #{VERSION_FILE} -> #{new_version}"
-
-run!(["git", "add", VERSION_FILE])
-run!(["git", "commit", "-m", "Release version #{new_version}."])
 
 gem_name = "flycal-cli-#{new_version}.gem"
 run!(["gem", "build", GEMSPEC])
