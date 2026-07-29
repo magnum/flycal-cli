@@ -184,8 +184,8 @@ Personal
 https://calendar.google.com/calendar/r/day/2026/7/29
 
 friday 15/7
-10-12
-13-15.30
+10 - 12
+13 - 15.30
 ```
 
 If `pbcopy` is available (macOS), the slot list without the header is also copied to the clipboard.
@@ -225,12 +225,12 @@ Missing keys are filled from `config/defaults.yml` in the gem and saved to your 
 
 ```
 friday 15/7
-10-12
-13-15.30
+10 - 12
+13 - 15.30
 
 monday 21/7
-12-13
-14-15
+12 - 13
+14 - 15
 ```
 
 ## Configuration

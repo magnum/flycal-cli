@@ -49,7 +49,7 @@ module FlycalCli
       end
 
       def slot_range(start_at, end_at)
-        "#{format_time(start_at)}-#{format_time(end_at)}"
+        "#{format_time(start_at)} - #{format_time(end_at)}"
       end
 
       def format_time(time)

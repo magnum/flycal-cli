@@ -277,7 +277,7 @@
       },
       "output": {
         "format": "text/plain",
-        "example": "found 3 slots\nfrom wed 29 July 2026 to wed 5 August 2026\nwith duration 45min\nfor calendars\nWork\nhttps://calendar.google.com/calendar/r/day/2026/7/29\n\nfriday 15/7\n10-12\n13-15.30"
+        "example": "found 3 slots\nfrom wed 29 July 2026 to wed 5 August 2026\nwith duration 45min\nfor calendars\nWork\nhttps://calendar.google.com/calendar/r/day/2026/7/29\n\nfriday 15/7\n10 - 12\n13 - 15.30"
       },
       "inputSchema": {
         "type": "object",
