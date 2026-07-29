@@ -507,7 +507,7 @@ module FlycalCli
     def copy_slots_to_clipboard(text)
       return unless pbcopy_available?
 
-      IO.popen("pbcopy", "w") { |io| io.write(text) }
+      IO.popen("pbcopy", "w") { |io| io.write(SlotFormatter.strip_ansi(text)) }
       puts ""
       puts Locale.t("slots.copied_to_clipboard")
     rescue StandardError

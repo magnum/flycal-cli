@@ -31,8 +31,7 @@
   "slots": {
     "no_available": "No available slots found.",
     "no_calendar": "No calendar found. Run 'flycal config' to set a default.",
-    "header": "found %{count} slots\nfrom %{from} to %{to}\nwith duration %{duration}\nfor calendars",
-    "template": "template %{name}",
+    "header": "found %{count} slots\nfrom %{from} to %{to}\nwith duration %{duration}, template %{template}\nconsidering calendars",
     "copied_to_clipboard": "✓ Slot list copied to clipboard (pbcopy)"
   },
   "errors": {

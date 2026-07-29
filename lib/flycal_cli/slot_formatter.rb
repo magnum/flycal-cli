@@ -7,16 +7,16 @@ module FlycalCli
         lines = []
         lines << Locale.t(
           "slots.header",
-          count: count,
+          count: underline(count),
           from: underline(Locale.format_long_date(from)),
           to: underline(Locale.format_long_date(to)),
-          duration: underline(duration)
+          duration: underline(duration),
+          template: underline(template.to_s)
         )
-        lines << Locale.t("slots.template", name: template) if template && !template.to_s.empty?
         calendars.each do |cal|
-          lines << cal[:name].to_s
+          lines << "- #{cal[:name]}"
         end
-        lines << google_calendar_day_url(from)
+        lines << "link: #{google_calendar_day_url(from)}"
         lines.join("\n")
       end
 
@@ -25,13 +25,17 @@ module FlycalCli
 
         slots_by_day.sort_by(&:first).each do |date, slots|
           lines << "" unless lines.empty?
-          lines << day_header(date)
+          lines << underline(day_header(date))
           slots.each do |start_at, end_at|
             lines << slot_range(start_at, end_at)
           end
         end
 
         lines.join("\n")
+      end
+
+      def strip_ansi(text)
+        text.to_s.gsub(/\e\[[0-9;]*m/, "")
       end
 
       private

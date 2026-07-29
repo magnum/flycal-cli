@@ -174,18 +174,20 @@ flycal slots --from 2026-08-01 --in "2 weeks" --duration 1h
 **Output:**
 
 ```
-found 3 slots
-from wed 29 July 2026 to wed 5 August 2026
-with duration 45min
-for calendars
-template work
-Incode - Antonio
-Personal
-https://calendar.google.com/calendar/r/day/2026/7/29
+found 6 slots
+from sat 1 August 2026 to sat 8 August 2026
+with duration 45min, template dinner
+considering calendars
+- incode - antonio
+- Polimi 10110009
+- antoniomolinari1977@gmail.com
+link: https://calendar.google.com/calendar/r/day/2026/8/1
 
-friday 15/7
-10 - 12
-13 - 15.30
+saturday 1/8
+19 - 23
+
+monday 3/8
+19 - 23
 ```
 
 If `pbcopy` is available (macOS), the slot list without the header is also copied to the clipboard.
