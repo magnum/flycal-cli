@@ -3,7 +3,7 @@
 module FlycalCli
   class SlotFormatter
     class << self
-      def format_header(from:, to:, duration:, calendars:, count:)
+      def format_header(from:, to:, duration:, calendars:, count:, template: nil)
         lines = []
         lines << Locale.t(
           "slots.header",
@@ -12,6 +12,7 @@ module FlycalCli
           to: underline(Locale.format_long_date(to)),
           duration: underline(duration)
         )
+        lines << Locale.t("slots.template", name: template) if template && !template.to_s.empty?
         calendars.each do |cal|
           lines << cal[:name].to_s
         end

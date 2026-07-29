@@ -1,12 +1,30 @@
+calendar_default: ~
 locale: en
 slots:
+  templates:
+    work:
+      days:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+      hours:
+        - 9:30-13:00
+        - 14:00-18:30
+    dinner:
+      days:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+      hours:
+        - 19-23
+  exclude_calendars: []
   defaults:
     from: now
     default_duration: 45min
   free_before: 0m
   free_after: 15m
-  exclude_calendars: []
-  hours:
-    - 9:30-13:00
-    - 14:00-18:30
-  weekdays_only: true

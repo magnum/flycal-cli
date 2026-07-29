@@ -182,11 +182,13 @@ module FlycalCli
         --from      from config (default: now)
         --in        1 week
         --duration  from config (default: 45min)
+        --template  first template in config (default: work)
 
       Examples:
         flycal slots
-        flycal slots --duration 1h
-        flycal slots --from 2026-08-01 --in "2 weeks" --duration 1h
+        flycal slots --in "5 days"
+        flycal slots --in "12 days" --template dinner
+        flycal slots --duration 1h --from 2026-08-01
     LONGDESC
     option :duration, type: :string,
            desc: "Slot length (default from config: slots.defaults.default_duration)"
@@ -194,6 +196,8 @@ module FlycalCli
            desc: "Search window from --from (default: 1 week)"
     option :from, type: :string, aliases: "-f",
            desc: "Start date/time (default from config: slots.defaults.from)"
+    option :template, type: :string, aliases: "-T",
+           desc: "Slot template name from config (default: first template, usually work)"
     option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"
     def slots
       apply_locale_override
@@ -216,13 +220,14 @@ module FlycalCli
       from_value = "now" if from_value.empty?
 
       begin
+        template_name, template = resolve_slots_template(slot_cfg, options[:template])
         slot_duration = DurationParser.to_seconds(duration_value)
         free_before = DurationParser.to_seconds(slot_cfg["free_before"] || "0m")
         free_after = DurationParser.to_seconds(slot_cfg["free_after"] || "0m")
         time_min = parse_slots_from(from_value)
         time_max = DurationParser.add_to_time(in_value, time_min)
-        workhours = parse_workhours(slot_cfg["hours"])
-        weekdays_only = !!slot_cfg["weekdays_only"]
+        hours = parse_workhours(template["hours"])
+        days = parse_template_days(template["days"])
       rescue FlycalCli::Error => e
         puts "Error: #{e.message}"
         exit 1
@@ -266,8 +271,8 @@ module FlycalCli
         time_min: time_min,
         time_max: time_max,
         slot_duration_seconds: slot_duration,
-        workhours: workhours,
-        weekdays_only: weekdays_only,
+        hours: hours,
+        days: days,
         free_before_seconds: free_before,
         free_after_seconds: free_after
       )
@@ -279,7 +284,8 @@ module FlycalCli
         to: time_max,
         duration: duration_value,
         calendars: calendar_meta,
-        count: slot_count
+        count: slot_count,
+        template: template_name
       )
       puts ""
       output = SlotFormatter.format_output(slots_by_day)
@@ -472,6 +478,32 @@ module FlycalCli
       DateTimeParser.parse(value)
     end
 
+    def resolve_slots_template(slot_cfg, requested_name)
+      templates = slot_cfg["templates"]
+      raise FlycalCli::Error, "slots.templates is missing in config.yml." unless templates.is_a?(Hash) && !templates.empty?
+
+      name = requested_name.to_s.strip
+      name = templates.keys.first.to_s if name.empty?
+
+      template = templates[name]
+      unless template.is_a?(Hash)
+        available = templates.keys.join(", ")
+        raise FlycalCli::Error, "Unknown slots template #{name.inspect}. Available: #{available}"
+      end
+
+      [name, template]
+    end
+
+    def parse_template_days(values)
+      days = Array(values).map(&:to_i)
+      raise FlycalCli::Error, "slots template days cannot be empty." if days.empty?
+
+      invalid = days.reject { |d| d.between?(1, 7) }
+      raise FlycalCli::Error, "Invalid template days #{invalid.inspect}. Use 1 (Mon) .. 7 (Sun)." unless invalid.empty?
+
+      days.uniq
+    end
+
     def copy_slots_to_clipboard(text)
       return unless pbcopy_available?
 
@@ -513,7 +545,7 @@ module FlycalCli
         [sh, sm, eh, em]
       end
 
-      raise FlycalCli::Error, "slots.hours cannot be empty in config.yml." if ranges.empty?
+      raise FlycalCli::Error, "template hours cannot be empty in config.yml." if ranges.empty?
 
       ranges.sort_by { |sh, sm, _eh, _em| (sh * 60) + sm }
     end

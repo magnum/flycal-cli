@@ -2,7 +2,8 @@
 
 module FlycalCli
   class SlotFinder
-    DEFAULT_WORKHOURS = [[9, 0, 18, 0]].freeze
+    DEFAULT_HOURS = [[9, 0, 18, 0]].freeze
+    DEFAULT_DAYS = [1, 2, 3, 4, 5].freeze
     STEP_SECONDS = 900
 
     def initialize(
@@ -10,8 +11,8 @@ module FlycalCli
       time_min:,
       time_max:,
       slot_duration_seconds:,
-      workhours: DEFAULT_WORKHOURS,
-      weekdays_only: true,
+      hours: DEFAULT_HOURS,
+      days: DEFAULT_DAYS,
       free_before_seconds: 0,
       free_after_seconds: 0
     )
@@ -19,8 +20,8 @@ module FlycalCli
       @time_min = time_min
       @time_max = time_max
       @slot_duration_seconds = slot_duration_seconds
-      @workhours = workhours
-      @weekdays_only = weekdays_only
+      @hours = hours
+      @days = Array(days).map(&:to_i)
       @free_before_seconds = free_before_seconds
       @free_after_seconds = free_after_seconds
     end
@@ -28,7 +29,7 @@ module FlycalCli
     def slots_by_day
       result = {}
 
-      each_workday do |date|
+      each_template_day do |date|
         slots = []
         day_intervals(date).each do |day_start, day_end|
           next if day_end <= day_start
@@ -47,7 +48,7 @@ module FlycalCli
 
     private
 
-    def each_workday
+    def each_template_day
       date = @time_min.to_date
       end_date = @time_max.to_date
 
@@ -57,18 +58,17 @@ module FlycalCli
       end
     end
 
+    # Template days: 1=Monday ... 7=Sunday
     def include_day?(date)
-      return true unless @weekdays_only
-
-      workday?(date)
+      @days.include?(iso_weekday(date))
     end
 
-    def workday?(date)
-      !date.saturday? && !date.sunday?
+    def iso_weekday(date)
+      date.wday.zero? ? 7 : date.wday
     end
 
     def day_intervals(date)
-      @workhours.map do |start_h, start_m, end_h, end_m|
+      @hours.map do |start_h, start_m, end_h, end_m|
         start_at = Time.local(date.year, date.month, date.day, start_h, start_m, 0)
         end_at = Time.local(date.year, date.month, date.day, end_h, end_m, 0)
         start_at = [@time_min, start_at].max
@@ -147,7 +147,6 @@ module FlycalCli
       return [] if rounded_start >= rounded_end
       return [] if (rounded_end - rounded_start) < @slot_duration_seconds
 
-      # One continuous free range (not sliding windows of fixed duration)
       [[rounded_start, rounded_end]]
     end
 

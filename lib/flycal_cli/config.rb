@@ -32,7 +32,10 @@ module FlycalCli
       end
 
       def calendar_default
-        load["calendar_default"]
+        value = load["calendar_default"]
+        return nil if value.nil? || value.to_s.strip.empty? || value.to_s == "~"
+
+        value.to_s
       end
 
       def calendar_default=(calendar_id)
@@ -95,6 +98,38 @@ module FlycalCli
 
         if normalized.key?("workhours") && !normalized.key?("hours")
           normalized["hours"] = normalized.delete("workhours")
+          changed = true
+        end
+
+        if normalized.key?("tempaltes") && !normalized.key?("templates")
+          normalized["templates"] = normalized.delete("tempaltes")
+          changed = true
+        end
+
+        templates = normalized["templates"]
+        templates_empty = !templates.is_a?(Hash) || templates.empty?
+
+        if templates_empty && normalized["hours"]
+          days =
+            if normalized.key?("weekdays_only") && normalized["weekdays_only"] == false
+              [1, 2, 3, 4, 5, 6, 7]
+            else
+              [1, 2, 3, 4, 5]
+            end
+
+          normalized["templates"] = {
+            "work" => {
+              "days" => days,
+              "hours" => deep_dup(normalized["hours"])
+            }
+          }
+          changed = true
+        end
+
+        %w[hours weekdays_only weekdays-only workhours tempaltes].each do |legacy_key|
+          next unless normalized.key?(legacy_key)
+
+          normalized.delete(legacy_key)
           changed = true
         end
 

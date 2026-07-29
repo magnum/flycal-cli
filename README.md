@@ -157,10 +157,10 @@ Find free time slots in your calendar. Output is a simple list for copy/paste in
 
 ```bash
 flycal slots
+flycal slots --in "5 days"
+flycal slots --in "12 days" --template dinner
 flycal slots --duration 1h
 flycal slots --from 2026-08-01 --in "2 weeks" --duration 1h
-flycal slots --from 01/08/2026 --in 3days --duration 30min
-flycal slots --in 1week -c Work
 ```
 
 **Options:**
@@ -168,17 +168,17 @@ flycal slots --in 1week -c Work
 - `--duration` — Slot length. Default: `slots.defaults.default_duration` in config (`45min`). Examples: `1h`, `30 minutes`
 - `--from` / `-f` — Start date/time. Default: `slots.defaults.from` in config (`now`). If a date without time is today, starts from the current time.
 - `--in` / `-i` — Search window from `--from`. Default: `1 week`.
+- `--template` / `-T` — Template from `slots.templates` in config. Default: first template (`work`)
 - `--calendar` / `-c` — Calendar name or ID used as fallback when `exclude_calendars` is not configured
 
 **Output:**
-
-Always starts with a header and clickable calendar links (OSC 8), then the availability list:
 
 ```
 found 3 slots
 from wed 29 July 2026 to wed 5 August 2026
 with duration 45min
 for calendars
+template work
 Incode - Antonio
 Personal
 https://calendar.google.com/calendar/r/day/2026/7/29
@@ -193,32 +193,50 @@ If `pbcopy` is available (macOS), the slot list without the header is also copie
 Slot search windows are configured in `~/.flycal/config.yml`:
 
 ```yaml
+calendar_default: ~
+locale: en
 slots:
+  templates:
+    work:
+      days:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+      hours:
+        - 9:30-13:00
+        - 14:00-18:30
+    dinner:
+      days:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+        - 7
+      hours:
+        - 19-23
+  exclude_calendars: []
   defaults:
     from: now
     default_duration: 45min
   free_before: 0m
   free_after: 15m
-  exclude_calendars:
-    - user@example.com
-    - user@gmail.com
-  hours:
-    - 9:30-13:00
-    - 14:00-18:30
-  weekdays_only: true
-locale: en
 ```
 
 Missing keys are filled from `config/defaults.yml` in the gem and saved to your `config.yml` on first read.
 
+- `calendar_default: ~` means no default calendar is set (`~` is YAML null)
+- `templates` — named schedules; default used is the first one (`work`)
+- `templates.*.days` — weekdays as numbers: `1` Monday … `7` Sunday
+- `templates.*.hours` — one or more ranges (`H-H`, `HH:MM-HH:MM`, mixed)
 - `defaults.from` — default `--from` for slots (`now` or a date string)
 - `defaults.default_duration` — default slot length when `--duration` is omitted
-- `free_before` — buffer before each slot; busy intervals are extended backward so no event may fall in this window before a slot
-- `free_after` — buffer after each slot; gaps must fit `duration + free_after`, but output shows slots of `duration` only
-- `exclude_calendars` lists calendars whose events block free slots; if empty or not set, events from `calendar_default` are used
-- `hours` accepts one or more ranges (`H-H`, `HH:MM-HH:MM`, mixed)
-- `weekdays_only: true` limits slots to Monday-Friday
-- `weekdays_only: false` includes weekends
+- `free_before` — buffer before each slot
+- `free_after` — buffer after each slot; gaps must fit `duration + free_after`, output shows continuous free ranges
+- `exclude_calendars` — calendars whose events block free slots; if empty, `calendar_default` is used
 - `locale` supports `en` and `it` (default is `en`)
 
 **Output example:**

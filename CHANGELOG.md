@@ -17,7 +17,8 @@
 - `flycal calendars` now only lists calendars (name and ID); default calendar is set via `flycal config`
 - Config keys renamed for consistency: `weekdays_only`, `exclude_calendars`
 - In `flycal config`, the current default calendar and already-selected exclude calendars are shown bold and underlined
-- Slot search subtracts busy time from all calendars listed in `exclude_calendars`
+- Slot schedules use `slots.templates` (`work`, `dinner`, …) with explicit `days` (1=Mon…7=Sun) and `hours`; `--template` selects which one (default: first)
+- Removed `weekdays_only` / top-level `hours` in favor of templates
 - `flycal slots --in` defaults to `1 week`; `--duration` is optional (defaults from config)
 - `flycal slots` uses `free_before` / `free_after` buffers and reports continuous free ranges (aggregated), each at least as long as `--duration`
 - `flycal slots` prints a header with duration/window and clickable Google Calendar links before availability

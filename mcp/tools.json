@@ -17,18 +17,17 @@
     "credentials_path": "~/.flycal/credentials.json",
     "keys": {
       "calendar_default": {
-        "type": "string",
-        "description": "Default Google Calendar ID used by search and as slots fallback"
+        "type": ["string", "null"],
+        "description": "Default Google Calendar ID used by search and as slots fallback. YAML null (~) means unset."
       },
       "locale": {
         "type": "string",
         "enum": ["en", "it"],
         "description": "Default CLI locale"
       },
-      "slots.hours": {
-        "type": "array",
-        "items": { "type": "string" },
-        "description": "Slot search hour ranges, e.g. [\"9:30-13:00\", \"14:00-18:30\"]"
+      "slots.templates": {
+        "type": "object",
+        "description": "Named templates with days (1=Mon..7=Sun) and hours ranges. Default template is the first key (work)."
       },
       "slots.defaults.from": {
         "type": "string",
@@ -45,10 +44,6 @@
       "slots.free_after": {
         "type": "string",
         "description": "Buffer after each slot; gaps must fit duration + free_after"
-      },
-      "slots.weekdays_only": {
-        "type": "boolean",
-        "description": "When true, slots are searched Mon–Fri only"
       },
       "slots.exclude_calendars": {
         "type": "array",
@@ -256,7 +251,7 @@
     {
       "name": "flycal_slots",
       "title": "Find free time slots",
-      "description": "Find free slots within configured hours, subtracting busy events from slots.exclude_calendars (or calendar_default if that list is empty). Starts from --from (default: config slots.defaults.from or now) for a window of --in (default: 1 week). Duration defaults to slots.defaults.default_duration (45min). Respects free_before and free_after buffers from config. Output begins with a multi-line header, calendar names, a Google Calendar day link, then continuous free ranges (each at least as long as duration). Read-only.",
+      "description": "Find free slots using a config template (days + hours). Default template is the first one (work). Use --template dinner for evening hours. Subtracts busy events from slots.exclude_calendars. Starts from --from (default: now) for --in (default: 1 week). Duration defaults to 45min. Respects free_before/free_after. Output: header, template name, calendars, Google Calendar day link, continuous free ranges.",
       "interactive": false,
       "requires_auth": true,
       "command": {
@@ -266,18 +261,20 @@
           "duration": ["--duration", "{value}"],
           "from": ["--from", "{value}"],
           "in": ["--in", "{value}"],
+          "template": ["--template", "{value}"],
           "calendar": ["--calendar", "{value}"],
           "locale": ["--locale", "{value}"]
         },
         "examples": [
           ["flycal", "slots"],
-          ["flycal", "slots", "--duration", "1h"],
-          ["flycal", "slots", "--from", "2026-08-01", "--in", "2 weeks", "--duration", "1h"]
+          ["flycal", "slots", "--in", "5 days"],
+          ["flycal", "slots", "--in", "12 days", "--template", "dinner"],
+          ["flycal", "slots", "--duration", "1h"]
         ]
       },
       "output": {
         "format": "text/plain",
-        "example": "found 3 slots\nfrom wed 29 July 2026 to wed 5 August 2026\nwith duration 45min\nfor calendars\nWork\nhttps://calendar.google.com/calendar/r/day/2026/7/29\n\nfriday 15/7\n10 - 12\n13 - 15.30"
+        "example": "found 3 slots\nfrom wed 29 July 2026 to wed 5 August 2026\nwith duration 45min\nfor calendars\ntemplate work\nWork\nhttps://calendar.google.com/calendar/r/day/2026/7/29\n\nfriday 15/7\n10 - 12\n13 - 15.30"
       },
       "inputSchema": {
         "type": "object",
@@ -295,6 +292,10 @@
           "in": {
             "type": "string",
             "description": "Search window from --from. Default: 1 week. Examples: 3 days, 1 week, 48 hours (quote if spaces)."
+          },
+          "template": {
+            "type": "string",
+            "description": "Template name from slots.templates (default: first template, usually work)."
           },
           "calendar": {
             "type": "string",
