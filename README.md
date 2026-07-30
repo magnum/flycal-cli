@@ -25,7 +25,13 @@ Then run `bundle install`.
 
 ## Setup
 
-Before using flycal, you need OAuth credentials from Google Cloud Console:
+Before using flycal you need OAuth credentials for the Google Calendar API.
+
+You can either:
+- create them yourself in Google Cloud Console, or
+- ask a teammate who manages the Google Cloud project to enable the Calendar API and share the Desktop OAuth client JSON with you
+
+If you set them up yourself:
 
 1. Go to [Google Cloud Console - Credentials](https://console.cloud.google.com/apis/credentials)
 2. Create a project or select an existing one
@@ -36,6 +42,8 @@ Before using flycal, you need OAuth credentials from Google Cloud Console:
    http://127.0.0.1:9292/oauth2callback
    ```
 6. Download the JSON file and save it as `~/.flycal/credentials.json`
+
+If you received the file from a teammate, save it as `~/.flycal/credentials.json` and continue with `flycal login`.
 
 ## Commands
 
@@ -93,8 +101,8 @@ flycal calendars
 Example output:
 
 ```
-Work user@example.com
-Personal user@gmail.com
+Work work@example.com
+Personal personal@example.com
 ```
 
 ### config
@@ -180,9 +188,9 @@ found 6 slots
 from sat 1 August 2026 to sat 8 August 2026
 with duration 45min, template dinner
 considering calendars
-- incode - antonio
-- Polimi 10110009
-- antoniomolinari1977@gmail.com
+- Work
+- Personal
+- Team calendar
 link: https://calendar.google.com/calendar/r/day/2026/8/1
 
 saturday 1/8

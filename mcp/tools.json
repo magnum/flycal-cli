@@ -155,7 +155,7 @@
       },
       "output": {
         "format": "text/lines",
-        "example": "Work molinari@incode.it\nPersonal user@gmail.com"
+        "example": "Work work@example.com\nPersonal personal@example.com"
       },
       "inputSchema": {
         "type": "object",
