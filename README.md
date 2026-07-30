@@ -192,7 +192,7 @@ monday 3/8
 19 - 23
 ```
 
-If `pbcopy` is available (macOS), the slot list without the header is also copied to the clipboard.
+If a clipboard tool is available (`pbcopy` on macOS, `wl-copy`/`xclip` on Linux, `clip` on Windows), the slot list without the header is also copied to the clipboard.
 
 Slot search windows are configured in `~/.flycal/config.yml`:
 

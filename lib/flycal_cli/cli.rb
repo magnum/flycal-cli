@@ -505,17 +505,11 @@ module FlycalCli
     end
 
     def copy_slots_to_clipboard(text)
-      return unless pbcopy_available?
+      tool = Clipboard.copy(SlotFormatter.strip_ansi(text))
+      return unless tool
 
-      IO.popen("pbcopy", "w") { |io| io.write(SlotFormatter.strip_ansi(text)) }
       puts ""
-      puts Locale.t("slots.copied_to_clipboard")
-    rescue StandardError
-      nil
-    end
-
-    def pbcopy_available?
-      system("which", "pbcopy", out: File::NULL, err: File::NULL)
+      puts Locale.t("slots.copied_to_clipboard", tool: tool)
     end
 
     def parse_hour_minute(value)
