@@ -82,7 +82,7 @@
     "path": "~/.flycal/config.yml",
     "credentials_path": "~/.flycal/credentials.json",
     "tokens_path": "~/.flycal/tokens.yml",
-    "credentials_note": "OAuth Desktop client JSON. Create it in Google Cloud Console yourself, or get it from a teammate who manages the project. Save as ~/.flycal/credentials.json then run flycal login.",
+    "credentials_note": "Default/test phase: project-provided API credentials — just run flycal login. Creating your own Google Cloud Console OAuth client is optional and only needed if you want to use your own API project; save that JSON as ~/.flycal/credentials.json then run flycal login.",
     "keys": {
       "calendar_default": {
         "type": ["string", "null"],
