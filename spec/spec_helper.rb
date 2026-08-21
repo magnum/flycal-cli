@@ -45,14 +45,17 @@ module FlycalSpecHelpers
     FlycalCli::Mock::Config.from_options(default_mock_options(overrides))
   end
 
-  def run_search_pipeline(config:, time_min:, time_max:, description: nil, calendar_ids: nil)
+  def run_search_pipeline(config:, time_min:, time_max:, description: nil, calendar_ids: nil, format: "text")
     service = FlycalCli::Mock::CalendarService.new(config)
     params = FlycalCli::Pipeline::Params.new(
+      command: "search",
       time_min: time_min,
       time_max: time_max,
       calendar_ids: calendar_ids || [config.calendar_name],
       description: description,
-      format: "text",
+      calendar: config.calendar_name,
+      format: format,
+      locale: "en",
       use_mock: true,
       mock_seed: config.seed,
       mock_calendar: config.calendar_name

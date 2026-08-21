@@ -2,9 +2,11 @@
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-08-21
+
 ### Added
 
-- RSpec suite for mock calendars, search filtering, and TextRenderer output (`bundle exec rspec`)
+- `--format json` via `JsonRenderer`: pretty JSON with `params`, `info`, `items`, `groups`
 
 ## [0.7.5] - 2026-08-21
 
@@ -12,8 +14,9 @@
 
 - Mock calendars for `flycal search` (templates, seed, no Google API in mock mode)
 - Search pipeline layers: `Retriever` → `Aggregator` → `Renderer` (`TextRenderer`); shared `Params` object across the pipeline
-- Global `--format` option (default `text`; `json` reserved for a future renderer)
+- Global `--format` option (default `text`)
 - `mcp/tools.json` machine-readable catalog of CLI commands for MCP servers (schemas, argv templates, auth/interactivity flags)
+- RSpec suite for mock calendars, search filtering, and TextRenderer output (`bundle exec rspec`)
 - `flycal config` interactive menu to set `calendar_default`, `exclude_calendars`, or open `~/.flycal/config.yml` with `$EDITOR`
 - `slots.exclude_calendars` in config: events from these calendars block free slots; if empty, falls back to `calendar_default`
 - Automatic migration of legacy config keys (`exclude-calendars` → `exclude_calendars`, `weekdays-only` → `weekdays_only`, `workhours` → `hours`)

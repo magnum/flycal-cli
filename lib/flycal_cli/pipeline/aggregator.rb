@@ -43,9 +43,9 @@ module FlycalCli
 
         params[:groups] =
           case group_by
-          when "week" then weekly_groups(ranges, time_min, time_max)
-          when "month" then monthly_groups(ranges, time_min, time_max)
-          else daily_groups(ranges, time_min, time_max)
+          when "week" then weekly_groups(events, ranges, time_min, time_max)
+          when "month" then monthly_groups(events, ranges, time_min, time_max)
+          else daily_groups(events, ranges, time_min, time_max)
           end
 
         params
@@ -67,7 +67,7 @@ module FlycalCli
         self.class.resolve_group_by(timeframe_days)
       end
 
-      def daily_groups(ranges, time_min, time_max)
+      def daily_groups(events, ranges, time_min, time_max)
         groups = []
         index = 1
         current = time_min.to_date
@@ -83,7 +83,8 @@ module FlycalCli
             start_at: day_start,
             end_at: day_end,
             period_label_end: current,
-            total_minutes: mins
+            total_minutes: mins,
+            events: events_in_period(events, day_start, day_end)
           )
           index += 1
           current += 1
@@ -92,7 +93,7 @@ module FlycalCli
         groups
       end
 
-      def weekly_groups(ranges, time_min, time_max)
+      def weekly_groups(events, ranges, time_min, time_max)
         groups = []
         index = 1
         current = time_min.to_date.beginning_of_week(:monday)
@@ -108,7 +109,8 @@ module FlycalCli
             start_at: week_start,
             end_at: week_end,
             period_label_end: week_end_date,
-            total_minutes: mins
+            total_minutes: mins,
+            events: events_in_period(events, week_start, week_end)
           )
           index += 1
           current += 7
@@ -117,7 +119,7 @@ module FlycalCli
         groups
       end
 
-      def monthly_groups(ranges, time_min, time_max)
+      def monthly_groups(events, ranges, time_min, time_max)
         groups = []
         index = 1
         current = time_min.to_date.beginning_of_month
@@ -137,7 +139,8 @@ module FlycalCli
             end_at: period_end,
             period_label_end: last_day,
             total_minutes: mins,
-            month_name: "#{Locale.month_name(current)} #{current.year}"
+            month_name: "#{Locale.month_name(current)} #{current.year}",
+            events: events_in_period(events, period_start, period_end)
           )
           index += 1
           current = current.next_month.beginning_of_month
@@ -146,7 +149,7 @@ module FlycalCli
         groups
       end
 
-      def build_group(index:, key:, start_at:, end_at:, period_label_end:, total_minutes:, month_name: nil)
+      def build_group(index:, key:, start_at:, end_at:, period_label_end:, total_minutes:, events:, month_name: nil)
         {
           index: index,
           key: key,
@@ -154,11 +157,22 @@ module FlycalCli
           end_at: end_at,
           period_label_end: period_label_end,
           month_name: month_name,
-          event_count: nil, # filled only when needed; minutes are overlap-based
+          event_count: events.size,
           total_minutes: total_minutes,
           hours: (total_minutes / 60.0).round(1),
-          working_days: (total_minutes / 60.0 / HOURS_PER_WORKING_DAY).round(1)
+          working_days: (total_minutes / 60.0 / HOURS_PER_WORKING_DAY).round(1),
+          events: events
         }
+      end
+
+      def events_in_period(events, period_start, period_end)
+        events.select do |ev|
+          start_at = ev[:start_at]
+          end_at = ev[:end_at]
+          next false if start_at.nil? || end_at.nil?
+
+          end_at > period_start && start_at < period_end
+        end
       end
 
       def minutes_in_period(ranges, period_start, period_end)

@@ -5,6 +5,7 @@ require "flycal_cli/pipeline/retriever"
 require "flycal_cli/pipeline/aggregator"
 require "flycal_cli/pipeline/renderer"
 require "flycal_cli/pipeline/text_renderer"
+require "flycal_cli/pipeline/json_renderer"
 require "flycal_cli/pipeline/search_pipeline"
 
 module FlycalCli

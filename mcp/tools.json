@@ -415,10 +415,10 @@
         "format": {
           "cli": ["--format"],
           "type": "string",
-          "enum": ["text"],
+          "enum": ["text", "json"],
           "required": false,
           "default": "text",
-          "description": "Output format. Currently only text; json planned."
+          "description": "Output format: text (shell) or json (pretty-printed)."
         }
       },
       "inputSchema": {
@@ -452,8 +452,8 @@
           },
           "format": {
             "type": "string",
-            "enum": ["text"],
-            "description": "--format. Output format (default: text). json coming soon."
+            "enum": ["text", "json"],
+            "description": "--format. Output format (default: text). json returns params/info/items/groups."
           }
         }
       }

@@ -14,7 +14,7 @@ module FlycalCli
     package_name "flycal"
     class_option :locale, type: :string, desc: "Override locale for this command (e.g. en, it)"
     class_option :format, type: :string, default: "text",
-                 desc: "Output format: text (default), json (coming soon)"
+                 desc: "Output format: text or json"
 
     def self.exit_on_failure?
       true
@@ -207,6 +207,7 @@ module FlycalCli
       end
 
       params = Pipeline::Params.new(
+        command: "search",
         time_min: time_min,
         time_max: time_max,
         calendar_ids: calendar_ids,

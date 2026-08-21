@@ -144,7 +144,7 @@ flycal config
 | `--description` / `-d` | — | Contains filter on title/description |
 | `--calendar` / `-c` | `calendar_default` | Name or ID |
 | `--locale` | config / `en` | `en` or `it` |
-| `--format` | `text` | Output format (`text`; `json` coming soon) |
+| `--format` | `text` | Output format: `text` or `json` |
 | `--mockTemplate` | — | Load mock defaults from `mocks/` or `mockTemplates/<name>.json` (no Google API) |
 | `--mockCalendar` | from template | Generated mock calendar name/id (required in template or CLI) |
 | `--mockSeed` | random | Reproducible mock distribution (printed in summary) |

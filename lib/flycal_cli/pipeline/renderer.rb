@@ -5,8 +5,8 @@ module FlycalCli
     # Third pipeline layer: render aggregated results to a chosen format.
     class Renderer
       FORMATS = {
-        "text" => "FlycalCli::Pipeline::TextRenderer"
-        # "json" => "FlycalCli::Pipeline::JsonRenderer"  # future
+        "text" => "FlycalCli::Pipeline::TextRenderer",
+        "json" => "FlycalCli::Pipeline::JsonRenderer"
       }.freeze
 
       def self.for(format)
