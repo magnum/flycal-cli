@@ -358,7 +358,8 @@
           "to": ["--to", "{value}"],
           "in": ["--in", "{value}"],
           "description": ["--description", "{value}"],
-          "locale": ["--locale", "{value}"]
+          "locale": ["--locale", "{value}"],
+          "format": ["--format", "{value}"]
         },
         "examples": [
           ["flycal", "search"],
@@ -410,6 +411,14 @@
           "enum": ["en", "it"],
           "required": false,
           "description": "Optional locale override."
+        },
+        "format": {
+          "cli": ["--format"],
+          "type": "string",
+          "enum": ["text", "json"],
+          "required": false,
+          "default": "text",
+          "description": "Output format: text (shell) or json (pretty-printed)."
         }
       },
       "inputSchema": {
@@ -440,6 +449,11 @@
             "type": "string",
             "enum": ["en", "it"],
             "description": "--locale. Optional locale override (en, it)."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["text", "json"],
+            "description": "--format. Output format (default: text). json returns params/info/items/groups."
           }
         }
       }
@@ -447,7 +461,7 @@
     {
       "name": "flycal_slots",
       "title": "Find free time slots",
-      "description": "Find continuous free ranges using a slots.templates schedule (days + hours). Default template = first key (usually work). Busy events come from slots.exclude_calendars (or calendar_default if empty). Respects free_before/free_after. Prints header + availability; copies availability list to clipboard when a clipboard tool exists.",
+      "description": "Find continuous free ranges using a slots.templates schedule (days + hours). Default template = first key (usually work). Busy events come from slots.exclude_calendars (or calendar_default if empty). Respects free_before/free_after. Output: text (header + availability, clipboard) or JSON via --format json.",
       "interactive": false,
       "requires_auth": true,
       "command": {
@@ -459,14 +473,16 @@
           "in": ["--in", "{value}"],
           "template": ["--template", "{value}"],
           "calendar": ["--calendar", "{value}"],
-          "locale": ["--locale", "{value}"]
+          "locale": ["--locale", "{value}"],
+          "format": ["--format", "{value}"]
         },
         "examples": [
           ["flycal", "slots"],
           ["flycal", "slots", "--in", "5 days"],
           ["flycal", "slots", "--from", "monday", "--in", "5 days", "--locale", "it"],
           ["flycal", "slots", "--in", "12 days", "--template", "dinner"],
-          ["flycal", "slots", "--from", "next monday", "--duration", "1h", "--template", "work"]
+          ["flycal", "slots", "--from", "next monday", "--duration", "1h", "--template", "work"],
+          ["flycal", "slots", "--format", "json", "--in", "5 days"]
         ]
       },
       "parameters": {
@@ -518,15 +534,21 @@
           "enum": ["en", "it"],
           "required": false,
           "description": "Optional locale override."
+        },
+        "format": {
+          "cli": ["--format"],
+          "type": "string",
+          "enum": ["text", "json"],
+          "required": false,
+          "default": "text",
+          "description": "Output format: text (shell + clipboard) or json (params/info/items/groups)."
         }
       },
       "output": {
-        "format": "text/plain",
+        "format": "text/plain or application/json",
         "includes": [
-          "count + from/to + duration + template",
-          "bullet list of considered calendars",
-          "link: Google Calendar day URL at --from",
-          "availability ranges grouped by day (copied to clipboard without header)"
+          "text: count + from/to + duration + template, calendars, link, ranges by day (clipboard)",
+          "json: params, info (slots_found, calendars, link), flat items, groups by day"
         ],
         "example": "found 6 slots\nfrom sat 1 August 2026 to sat 8 August 2026\nwith duration 45min, template dinner\nconsidering calendars\n- Work\n- Personal\nlink: https://calendar.google.com/calendar/r/day/2026/8/1\n\nsaturday 1/8\n19 - 23"
       },
@@ -559,6 +581,11 @@
             "type": "string",
             "enum": ["en", "it"],
             "description": "--locale. Optional locale override (en, it)."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["text", "json"],
+            "description": "--format. text (default) or json."
           }
         }
       }

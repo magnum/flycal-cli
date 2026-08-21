@@ -7,9 +7,12 @@ require "flycal_cli/auth"
 require "flycal_cli/duration_parser"
 require "flycal_cli/date_time_parser"
 require "flycal_cli/clipboard"
+require "flycal_cli/description_query"
 require "flycal_cli/calendar_service"
 require "flycal_cli/slot_finder"
 require "flycal_cli/slot_formatter"
+require "flycal_cli/mock"
+require "flycal_cli/pipeline"
 require "flycal_cli/cli"
 
 module FlycalCli

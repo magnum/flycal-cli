@@ -133,6 +133,7 @@ flycal config
 | `--template` / `-T` | first template (`work`) | e.g. `dinner` |
 | `--calendar` / `-c` | — | Fallback if `exclude_calendars` is empty |
 | `--locale` | config / `en` | `en` or `it` |
+| `--format` | `text` | `text` or `json` |
 
 ### `flycal search`
 
@@ -141,9 +142,16 @@ flycal config
 | `--from` / `-f` | today midnight | Absolute or relative date |
 | `--to` / `-t` | +30 days | Ignored if `--in` is set |
 | `--in` / `-i` | — | Duration from `--from` |
-| `--description` / `-d` | — | Contains filter on title/description |
+| `--description` / `-d` | — | Search filter; OR terms with `\|` (e.g. `rui\|solver`) |
+| `--groupBy` | auto | `day`, `week`, `month`, or any string (e.g. `rui\|solver`) for string grouping |
 | `--calendar` / `-c` | `calendar_default` | Name or ID |
 | `--locale` | config / `en` | `en` or `it` |
+| `--format` | `text` | Output format: `text` or `json` |
+| `--mockTemplate` | — | Load mock defaults from `mocks/` or `mockTemplates/<name>.json` (no Google API) |
+| `--mockCalendar` | from template | Generated mock calendar name/id (required in template or CLI) |
+| `--mockSeed` | random | Reproducible mock distribution (printed in summary) |
+
+Mock templates live in `mocks/` or `mockTemplates/` (example: `mock1.json` with `mockCalendar`). CLI mock flags override template values. Search `--from` / `--to` keep the normal defaults (today → +30 days), independent of the mock generation window.
 
 Relative dates work in English and Italian: `today`/`oggi`, `tomorrow`/`domani`, `monday`/`lunedi`, `next monday`/`prossimo lunedi`, `last friday`/`scorso venerdi`.
 

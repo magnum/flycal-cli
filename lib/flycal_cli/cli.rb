@@ -13,6 +13,8 @@ module FlycalCli
   class Cli < Thor
     package_name "flycal"
     class_option :locale, type: :string, desc: "Override locale for this command (e.g. en, it)"
+    class_option :format, type: :string, default: "text",
+                 desc: "Output format: text or json"
 
     def self.exit_on_failure?
       true
@@ -119,20 +121,56 @@ module FlycalCli
                           Format: 30days, 48hours, 2months, 1year (no space).
                           With space use quotes: --in "30 days"
 
+      Mock mode (no Google API; triggered by --mockCalendar or --mockTemplate):
+        --mockTemplate NAME   Load defaults from mocks/ or mockTemplates/NAME.json
+        --mockCalendar NAME   Mock calendar id/name (required here or in template)
+        --mockSeed N          Reproducible random distribution
+        --mockEventCount N
+        --mockEventFrom/--mockEventTo
+        --mockEventDescriptionPatterns a,b,c
+        --mockEventDurationMin/--mockEventDurationMax
+        --mockEventHoursFrom/--mockEventHoursTo
+
       Examples:
         flycal search
         flycal search --in 30days -d placeholder
         flycal search -i 1months --description placeholder
         flycal search -f 2025-03-01 --in 2months
+        flycal search --mockTemplate mock1 --description work --calendar mock1
+        flycal search --groupBy "rui|solver" --format json
     LONGDESC
     option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"
     option :from, type: :string, aliases: "-f", desc: "Start (default: today midnight)"
     option :to, type: :string, aliases: "-t", desc: "End (default: 23:59 of day 30)"
     option :in, type: :string, aliases: "-i", desc: "Duration: 30days, 48hours, 2months, 1year (overrides --to)"
-    option :description, type: :string, aliases: "-d", desc: "Filter by text in event"
+    option :description, type: :string, aliases: "-d",
+           desc: "Filter text in event (OR with |, e.g. rui|solver)"
+    option :groupBy, type: :string,
+           desc: "Grouping: day, week, month, or a string like rui|solver (default: auto from timeframe)"
+    option :mockTemplate, type: :string, desc: "Load mock defaults from mocks/<name>.json"
+    option :mockCalendar, type: :string, desc: "Use a generated mock calendar (skips Google API)"
+    option :mockSeed, type: :numeric, desc: "Seed for reproducible mock events"
+    option :mockEventDescriptionPatterns, type: :string, desc: "Comma-separated title patterns (e.g. work,personal)"
+    option :mockEventCount, type: :numeric, desc: "Number of mock events to generate"
+    option :mockEventFrom, type: :string, desc: "Mock events start date"
+    option :mockEventTo, type: :string, desc: "Mock events end date"
+    option :mockEventDurationMin, type: :string, desc: "Min mock event duration (e.g. 4h)"
+    option :mockEventDurationMax, type: :string, desc: "Max mock event duration (e.g. 4h)"
+    option :mockEventHoursFrom, type: :string, desc: "Daily start window for mock events (HH:MM)"
+    option :mockEventHoursTo, type: :string, desc: "Daily end window for mock events (HH:MM)"
     def search
       apply_locale_override
-      unless Auth.logged_in?
+
+      mock_mode = Mock::Config.enabled?(options)
+      mock_config = nil
+      if mock_mode
+        begin
+          mock_config = Mock::Config.from_options(options)
+        rescue FlycalCli::Error => e
+          puts "Error: #{e.message}"
+          exit 1
+        end
+      elsif !Auth.logged_in?
         puts "You are not connected. Run 'flycal login' first."
         exit 1
       end
@@ -154,24 +192,50 @@ module FlycalCli
         exit 1
       end
 
-      creds = Auth.credentials
-      service = CalendarService.new(creds)
+      service =
+        if mock_config
+          Mock::CalendarService.new(mock_config)
+        else
+          CalendarService.new(Auth.credentials)
+        end
 
-      calendar_ids = resolve_calendar_ids(service, options[:calendar])
+      calendar_ids =
+        if mock_config && options[:calendar].to_s.empty?
+          [mock_config.calendar_name]
+        else
+          resolve_calendar_ids(service, options[:calendar])
+        end
       if calendar_ids.empty?
         puts "No calendars found."
         exit 1
       end
 
-      events = service.list_all_events(
-        calendar_ids,
+      params = Pipeline::Params.new(
+        command: "search",
         time_min: time_min,
         time_max: time_max,
-        query: options[:description]
+        calendar_ids: calendar_ids,
+        description: options[:description],
+        calendar: options[:calendar],
+        from_option: options[:from],
+        to_option: options[:to],
+        in_option: options[:in],
+        group_by_option: options[:groupBy],
+        format: options[:format] || "text",
+        locale: Locale.current_locale,
+        use_mock: !mock_config.nil?,
+        mock_seed: mock_config&.seed,
+        mock_calendar: mock_config&.calendar_name,
+        mock_template: mock_config&.template_name
       )
 
-      print_events(service, events)
-      print_search_summary(events, time_min: time_min, time_max: time_max)
+      begin
+        output = Pipeline::SearchPipeline.new(service).run(params)
+        print output
+      rescue FlycalCli::Error => e
+        puts "Error: #{e.message}"
+        exit 1
+      end
     end
 
     desc "slots", "Find available time slots in your calendar"
@@ -279,21 +343,45 @@ module FlycalCli
 
       slots_by_day = finder.slots_by_day
       slot_count = slots_by_day.values.sum(&:size)
-      puts SlotFormatter.format_header(
-        from: time_min,
-        to: time_max,
-        duration: duration_value,
-        calendars: calendar_meta,
-        count: slot_count,
-        template: template_name
-      )
-      puts ""
-      output = SlotFormatter.format_output(slots_by_day)
-      if output.empty?
-        puts Locale.t("slots.no_available")
+      format = (options[:format] || "text").to_s.strip.downcase
+      format = "text" if format.empty?
+
+      case format
+      when "json"
+        print SlotFormatter.format_json(
+          slots_by_day: slots_by_day,
+          time_min: time_min,
+          time_max: time_max,
+          duration: duration_value,
+          template: template_name,
+          calendars: calendar_meta,
+          locale: Locale.current_locale,
+          calendar_option: options[:calendar],
+          from_option: options[:from],
+          in_option: options[:in],
+          free_before: slot_cfg["free_before"],
+          free_after: slot_cfg["free_after"]
+        )
+      when "text"
+        puts SlotFormatter.format_header(
+          from: time_min,
+          to: time_max,
+          duration: duration_value,
+          calendars: calendar_meta,
+          count: slot_count,
+          template: template_name
+        )
+        puts ""
+        output = SlotFormatter.format_output(slots_by_day)
+        if output.empty?
+          puts Locale.t("slots.no_available")
+        else
+          puts output
+          copy_slots_to_clipboard(output)
+        end
       else
-        puts output
-        copy_slots_to_clipboard(output)
+        puts "Error: Unsupported format #{format.inspect}. Available: text, json"
+        exit 1
       end
     end
 
@@ -317,8 +405,6 @@ module FlycalCli
     default_task :help
 
     private
-
-    HOURS_PER_WORKING_DAY = 8
 
     def bold(str)
       "\e[1m#{str}\e[0m"
@@ -579,142 +665,6 @@ module FlycalCli
       end
 
       matches.map(&:id)
-    end
-
-    def print_events(service, events)
-      # Use calendar list for names (avoids extra API calls)
-      calendar_list = service.list_calendars
-      calendar_names = calendar_list.to_h { |c| [c.id, c.summary || c.id] }
-
-      events.each do |item|
-        cal_id = item[:calendar_id]
-        event = item[:event]
-        cal_name = calendar_names[cal_id] || cal_id
-
-        start_time = event.start&.date_time || event.start&.date
-        end_time = event.end&.date_time || event.end&.date
-
-        start_str = format_datetime(start_time)
-        end_str = format_datetime(end_time)
-        desc = event.summary || "(no title)"
-        desc = event.description&.slice(0, 80) if event.summary.nil? && event.description
-
-        puts "#{cal_name} | #{start_str} | #{end_str} | #{desc}"
-      end
-    end
-
-    def format_datetime(dt)
-      return "-" if dt.nil?
-
-      if dt.is_a?(String)
-        dt
-      else
-        "#{Locale.day_abbr(dt)} #{dt.strftime("%Y-%m-%d %H:%M")}"
-      end
-    end
-
-    def format_date_with_day(dt)
-      return "-" if dt.nil?
-
-      t = dt.respond_to?(:to_time) ? dt.to_time : dt
-      "#{Locale.day_abbr(t)} #{t.strftime("%Y-%m-%d")}"
-    end
-
-    def print_search_summary(events, time_min:, time_max:)
-      event_ranges = extract_event_ranges(events)
-      total_minutes = event_ranges.sum { |s, e| (e - s) / 60 }
-
-      from_str = time_min.strftime("%a %Y-%m-%d %H:%M")
-      to_str = time_max.strftime("%a %Y-%m-%d %H:%M")
-
-      puts "\n---"
-      puts "From: #{from_str} | To: #{to_str}"
-      puts "Events found: #{events.size}"
-      puts "Total time occupied: #{format_duration(total_minutes)}"
-
-      frame_days = (time_max - time_min) / 86400.0
-      if frame_days > 30
-        print_monthly_breakdown(event_ranges, time_min, time_max)
-      elsif frame_days > 7
-        print_weekly_breakdown(event_ranges, time_min, time_max)
-      end
-    end
-
-    def extract_event_ranges(events)
-      events.filter_map do |item|
-        event = item[:event]
-        start_t = event.start&.date_time || event.start&.date
-        end_t = event.end&.date_time || event.end&.date
-        next if start_t.nil? || end_t.nil?
-
-        start_t = start_t.to_time if start_t.respond_to?(:to_time)
-        end_t = end_t.to_time if end_t.respond_to?(:to_time)
-        [start_t, end_t]
-      end
-    end
-
-    def format_duration(total_minutes)
-      hours = (total_minutes / 60).floor
-      mins = (total_minutes % 60).round
-      working_days = (total_minutes / 60.0 / HOURS_PER_WORKING_DAY).round(1)
-      "#{bold(hours)}h #{bold(mins)}min (#{bold(working_days)} working days)"
-    end
-
-    def format_hours_and_days(hours, working_days)
-      "#{bold(hours)}h (#{bold(working_days)} working days)"
-    end
-
-    def minutes_in_period(event_ranges, period_start, period_end)
-      event_ranges.sum do |ev_start, ev_end|
-        overlap_start = [ev_start, period_start].max
-        overlap_end = [ev_end, period_end].min
-        overlap_sec = overlap_end - overlap_start
-        overlap_sec > 0 ? overlap_sec / 60.0 : 0
-      end
-    end
-
-    def print_weekly_breakdown(event_ranges, time_min, time_max)
-      puts "\nBy week:"
-      week_num = 1
-      current = time_min.to_date.beginning_of_week(:monday)
-      while current.to_time < time_max
-        week_start = [current.to_time, time_min].max
-        week_end_date = current.end_of_week(:monday)
-        week_end = [week_end_date.to_time + 1.day, time_max].min
-        mins = minutes_in_period(event_ranges, week_start, week_end)
-        hours = (mins / 60).round(1)
-        working_days = (mins / 60.0 / HOURS_PER_WORKING_DAY).round(1)
-        start_str = format_date_with_day(week_start)
-        end_str = format_date_with_day(week_end_date)
-        puts "  #{bold(week_num)}. #{start_str} - #{end_str}: #{format_hours_and_days(hours, working_days)}"
-        week_num += 1
-        current = current + 7.days
-      end
-    end
-
-    def print_monthly_breakdown(event_ranges, time_min, time_max)
-      puts "\nBy month:"
-      month_num = 1
-      current = time_min.to_date.beginning_of_month
-      end_date = time_max.to_date
-
-      while current <= end_date
-        month_start = current.beginning_of_month.to_time
-        month_end = (current.end_of_month + 1.day).to_time
-        period_start = [month_start, time_min].max
-        period_end = [month_end, time_max].min
-
-        mins = minutes_in_period(event_ranges, period_start, period_end)
-        hours = (mins / 60).round(1)
-        working_days = (mins / 60.0 / HOURS_PER_WORKING_DAY).round(1)
-        month_name = "#{Locale.month_name(current)} #{current.year}"
-        start_str = format_date_with_day(period_start)
-        last_day = (period_end.to_date - 1.day)
-        end_str = format_date_with_day(last_day)
-        puts "  #{month_num}. #{month_name} (#{start_str} - #{end_str}): #{format_hours_and_days(hours, working_days)}"
-        month_num += 1
-        current = current.next_month.beginning_of_month
-      end
     end
   end
 end

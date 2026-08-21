@@ -2,9 +2,45 @@
 
 ## [Unreleased]
 
+## [0.7.9] - 2026-08-21
+
 ### Added
 
+- `flycal slots --format json`: pretty JSON with `params`, `info`, `items`, day `groups`
+
+### Changed
+
+- JSON search group `from`/`to` use Google-style ISO-8601 (`2026-07-29T14:41:00+00:00`) instead of `YYYYMMDDTHHMMSS`
+
+## [0.7.8] - 2026-08-21
+
+### Changed
+
+- `--groupBy` string mode: any value other than `day`/`week`/`month` is split on `|` for grouping (independent from `--description`)
+
+## [0.7.7] - 2026-08-21
+
+### Added
+
+- `--description` OR terms with `|` (case-insensitive)
+- `--groupBy day|week|month|description` to override auto grouping
+- JSON group fields: `from`/`to` as ISO-8601 (time groups); `description` for description groups
+
+## [0.7.6] - 2026-08-21
+
+### Added
+
+- `--format json` via `JsonRenderer`: pretty JSON with `params`, `info`, `items`, `groups`
+
+## [0.7.5] - 2026-08-21
+
+### Added
+
+- Mock calendars for `flycal search` (templates, seed, no Google API in mock mode)
+- Search pipeline layers: `Retriever` → `Aggregator` → `Renderer` (`TextRenderer`); shared `Params` object across the pipeline
+- Global `--format` option (default `text`)
 - `mcp/tools.json` machine-readable catalog of CLI commands for MCP servers (schemas, argv templates, auth/interactivity flags)
+- RSpec suite for mock calendars, search filtering, and TextRenderer output (`bundle exec rspec`)
 - `flycal config` interactive menu to set `calendar_default`, `exclude_calendars`, or open `~/.flycal/config.yml` with `$EDITOR`
 - `slots.exclude_calendars` in config: events from these calendars block free slots; if empty, falls back to `calendar_default`
 - Automatic migration of legacy config keys (`exclude-calendars` → `exclude_calendars`, `weekdays-only` → `weekdays_only`, `workhours` → `hours`)

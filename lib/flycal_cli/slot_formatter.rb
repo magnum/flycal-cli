@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "json"
+
 module FlycalCli
   class SlotFormatter
     class << self
@@ -34,11 +36,94 @@ module FlycalCli
         lines.join("\n")
       end
 
+      # Pretty JSON for --format json (EmCP / API friendly).
+      def format_json(
+        slots_by_day:,
+        time_min:,
+        time_max:,
+        duration:,
+        template:,
+        calendars:,
+        locale: nil,
+        calendar_option: nil,
+        from_option: nil,
+        in_option: nil,
+        free_before: nil,
+        free_after: nil
+      )
+        items = []
+        groups = slots_by_day.sort_by(&:first).map do |date, slots|
+          slot_items = slots.map { |start_at, end_at| serialize_slot(start_at, end_at, date) }
+          items.concat(slot_items)
+          {
+            "type" => "day",
+            "key" => date.iso8601,
+            "date" => date.iso8601,
+            "from" => format_iso(slots.map(&:first).min),
+            "to" => format_iso(slots.map(&:last).max),
+            "slots_found" => slot_items.size,
+            "items" => slot_items
+          }
+        end
+
+        payload = {
+          "params" => {
+            "command" => "slots",
+            "from" => format_iso(time_min),
+            "to" => format_iso(time_max),
+            "duration" => duration,
+            "template" => template,
+            "calendar" => blank_to_nil(calendar_option),
+            "calendar_ids" => Array(calendars).map { |c| c[:id] },
+            "format" => "json",
+            "locale" => locale || Locale.current_locale,
+            "from_option" => blank_to_nil(from_option),
+            "in_option" => blank_to_nil(in_option),
+            "free_before" => free_before,
+            "free_after" => free_after
+          }.compact,
+          "info" => {
+            "slots_found" => items.size,
+            "from" => format_iso(time_min),
+            "to" => format_iso(time_max),
+            "duration" => duration,
+            "template" => template,
+            "calendars" => Array(calendars).map { |c| { "id" => c[:id], "name" => c[:name] } },
+            "link" => google_calendar_day_url(time_min)
+          },
+          "items" => items,
+          "groups" => groups
+        }
+
+        JSON.pretty_generate(payload) + "\n"
+      end
+
       def strip_ansi(text)
         text.to_s.gsub(/\e\[[0-9;]*m/, "")
       end
 
       private
+
+      def serialize_slot(start_at, end_at, date)
+        {
+          "date" => date.iso8601,
+          "start" => { "dateTime" => format_iso(start_at) },
+          "end" => { "dateTime" => format_iso(end_at) },
+          "duration_seconds" => (end_at - start_at).to_i
+        }
+      end
+
+      def format_iso(value)
+        return nil if value.nil?
+        return value.iso8601 if value.respond_to?(:iso8601)
+
+        value.to_s
+      end
+
+      def blank_to_nil(value)
+        str = value.to_s
+        str.empty? ? nil : str
+      end
 
       def underline(str)
         "\e[4m#{str}\e[0m"

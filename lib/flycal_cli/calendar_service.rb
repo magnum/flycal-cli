@@ -57,14 +57,11 @@ module FlycalCli
         end
       end
 
-      # Filter: only events where summary or description contains the search string (case-insensitive)
+      # Filter: summary/description contains any OR term from query ("a|b"), case-insensitive.
       if query && !query.to_s.strip.empty?
-        q = query.strip.downcase
         all_events.select! do |item|
           event = item[:event]
-          summary = (event.summary || "").downcase
-          description = (event.description || "").downcase
-          summary.include?(q) || description.include?(q)
+          DescriptionQuery.match?(event.summary, event.description, query)
         end
       end
 
