@@ -141,7 +141,8 @@ flycal config
 | `--from` / `-f` | today midnight | Absolute or relative date |
 | `--to` / `-t` | +30 days | Ignored if `--in` is set |
 | `--in` / `-i` | — | Duration from `--from` |
-| `--description` / `-d` | — | Contains filter on title/description |
+| `--description` / `-d` | — | Contains filter; OR terms with `\|` (e.g. `rui\|solver`) |
+| `--groupBy` | auto | `day`, `week`, `month`, or `description` (split `--description` terms) |
 | `--calendar` / `-c` | `calendar_default` | Name or ID |
 | `--locale` | config / `en` | `en` or `it` |
 | `--format` | `text` | Output format: `text` or `json` |

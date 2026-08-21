@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-08-21
+
+### Added
+
+- `--description` OR terms with `|` (case-insensitive)
+- `--groupBy day|week|month|description` to override auto grouping
+- JSON group fields: `from`/`to` as `YYYYMMDDTHHMMSS` (time groups); `description` for description groups
+
 ## [0.7.6] - 2026-08-21
 
 ### Added

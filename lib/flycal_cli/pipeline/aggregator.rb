@@ -8,12 +8,16 @@ module FlycalCli
   module Pipeline
     # Second pipeline layer: group events and compute aggregate metrics.
     #
-    # group_by is derived from the retrieved timeframe:
+    # Default group_by from timeframe:
     #   day   — timeframe <= 7 days
     #   week  — timeframe > 7 days and <= 30 days
     #   month — timeframe > 30 days
+    #
+    # Override with params[:group_by_option] / --groupBy:
+    #   day | week | month | description
     class Aggregator
       HOURS_PER_WORKING_DAY = 8
+      ALLOWED_GROUP_BY = %w[day week month description].freeze
 
       def call(params)
         time_min = params[:time_min]
@@ -21,7 +25,7 @@ module FlycalCli
         events = Array(params[:events])
 
         timeframe_days = (time_max - time_min) / 86400.0
-        group_by = resolve_group_by(timeframe_days)
+        group_by = resolve_group_by(timeframe_days, params[:group_by_option])
 
         params[:timeframe_days] = timeframe_days
         params[:group_by] = group_by
@@ -45,13 +49,23 @@ module FlycalCli
           case group_by
           when "week" then weekly_groups(events, ranges, time_min, time_max)
           when "month" then monthly_groups(events, ranges, time_min, time_max)
+          when "description" then description_groups(events, params[:description])
           else daily_groups(events, ranges, time_min, time_max)
           end
 
         params
       end
 
-      def self.resolve_group_by(timeframe_days)
+      def self.resolve_group_by(timeframe_days, explicit = nil)
+        key = explicit.to_s.strip.downcase
+        unless key.empty?
+          unless ALLOWED_GROUP_BY.include?(key)
+            raise FlycalCli::Error,
+                  "Unsupported groupBy #{explicit.inspect}. Available: #{ALLOWED_GROUP_BY.join(", ")}"
+          end
+          return key
+        end
+
         if timeframe_days > 30
           "month"
         elsif timeframe_days > 7
@@ -63,8 +77,8 @@ module FlycalCli
 
       private
 
-      def resolve_group_by(timeframe_days)
-        self.class.resolve_group_by(timeframe_days)
+      def resolve_group_by(timeframe_days, explicit)
+        self.class.resolve_group_by(timeframe_days, explicit)
       end
 
       def daily_groups(events, ranges, time_min, time_max)
@@ -149,7 +163,33 @@ module FlycalCli
         groups
       end
 
-      def build_group(index:, key:, start_at:, end_at:, period_label_end:, total_minutes:, events:, month_name: nil)
+      def description_groups(events, description_query)
+        patterns = DescriptionQuery.patterns(description_query)
+        if patterns.empty?
+          raise FlycalCli::Error,
+                "groupBy description requires --description with at least one term (e.g. rui|solver)."
+        end
+
+        patterns.each_with_index.map do |pattern, idx|
+          matched = events.select do |ev|
+            DescriptionQuery.match_term?(ev[:summary], ev[:description], pattern)
+          end
+          minutes = matched.sum { |ev| ev[:duration_minutes].to_f }
+          build_group(
+            index: idx + 1,
+            key: pattern,
+            start_at: nil,
+            end_at: nil,
+            period_label_end: nil,
+            total_minutes: minutes,
+            events: matched,
+            description: pattern
+          )
+        end
+      end
+
+      def build_group(index:, key:, start_at:, end_at:, period_label_end:, total_minutes:, events:,
+                      month_name: nil, description: nil)
         {
           index: index,
           key: key,
@@ -157,6 +197,7 @@ module FlycalCli
           end_at: end_at,
           period_label_end: period_label_end,
           month_name: month_name,
+          description: description,
           event_count: events.size,
           total_minutes: total_minutes,
           hours: (total_minutes / 60.0).round(1),

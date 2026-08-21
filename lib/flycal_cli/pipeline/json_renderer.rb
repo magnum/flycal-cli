@@ -30,6 +30,7 @@ module FlycalCli
           "format" => params[:format] || "json",
           "locale" => params[:locale] || Locale.current_locale,
           "group_by" => params[:group_by],
+          "group_by_option" => blank_to_nil(params[:group_by_option]),
           "from_option" => blank_to_nil(params[:from_option]),
           "to_option" => blank_to_nil(params[:to_option]),
           "in_option" => blank_to_nil(params[:in_option])
@@ -66,13 +67,17 @@ module FlycalCli
             "type" => type,
             "key" => group[:key],
             "index" => group[:index],
-            "from" => format_time(group[:start_at]),
-            "to" => format_time(group[:end_at]),
             "total_hours" => group[:hours],
             "total_working_days" => group[:working_days],
             "events_found" => group[:event_count] || Array(group[:events]).size,
             "items" => Array(group[:events]).map { |ev| serialize_event(ev) }
           }.tap do |g|
+            if type == "description"
+              g["description"] = group[:description] || group[:key]
+            else
+              g["from"] = format_group_boundary(group[:start_at])
+              g["to"] = format_group_boundary(group[:end_at])
+            end
             g["month_name"] = group[:month_name] if group[:month_name]
           end
         end
@@ -118,6 +123,14 @@ module FlycalCli
         return value.iso8601 if value.respond_to?(:iso8601)
 
         value.to_s
+      end
+
+      # Compact local datetime used on group boundaries: YYYYMMDDTHHMMSS
+      def format_group_boundary(value)
+        return nil if value.nil?
+
+        t = value.respond_to?(:to_time) ? value.to_time : value
+        t.strftime("%Y%m%dT%H%M%S")
       end
 
       def blank_to_nil(value)
