@@ -1,5 +1,9 @@
 # flycal-cli
 
+project now part of monorepo https://github.com/magnum/
+
+---
+
 [![Gem Version](https://badge.fury.io/rb/flycal-cli.svg)](https://badge.fury.io/rb/flycal-cli)
 
 Read your Google Calendar from the terminal: search events, find free slots, copy them into an email. **Read-only** — nothing is modified on the calendar.
