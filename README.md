@@ -133,6 +133,7 @@ flycal config
 | `--template` / `-T` | first template (`work`) | e.g. `dinner` |
 | `--calendar` / `-c` | — | Fallback if `exclude_calendars` is empty |
 | `--locale` | config / `en` | `en` or `it` |
+| `--format` | `text` | `text` or `json` |
 
 ### `flycal search`
 

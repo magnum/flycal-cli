@@ -2,9 +2,15 @@
 
 ## [Unreleased]
 
+## [0.7.9] - 2026-08-21
+
+### Added
+
+- `flycal slots --format json`: pretty JSON with `params`, `info`, `items`, day `groups`
+
 ### Changed
 
-- JSON group `from`/`to` use Google-style ISO-8601 (`2026-07-29T14:41:00+00:00`) instead of `YYYYMMDDTHHMMSS`
+- JSON search group `from`/`to` use Google-style ISO-8601 (`2026-07-29T14:41:00+00:00`) instead of `YYYYMMDDTHHMMSS`
 
 ## [0.7.8] - 2026-08-21
 

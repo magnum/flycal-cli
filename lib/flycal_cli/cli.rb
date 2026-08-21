@@ -343,21 +343,45 @@ module FlycalCli
 
       slots_by_day = finder.slots_by_day
       slot_count = slots_by_day.values.sum(&:size)
-      puts SlotFormatter.format_header(
-        from: time_min,
-        to: time_max,
-        duration: duration_value,
-        calendars: calendar_meta,
-        count: slot_count,
-        template: template_name
-      )
-      puts ""
-      output = SlotFormatter.format_output(slots_by_day)
-      if output.empty?
-        puts Locale.t("slots.no_available")
+      format = (options[:format] || "text").to_s.strip.downcase
+      format = "text" if format.empty?
+
+      case format
+      when "json"
+        print SlotFormatter.format_json(
+          slots_by_day: slots_by_day,
+          time_min: time_min,
+          time_max: time_max,
+          duration: duration_value,
+          template: template_name,
+          calendars: calendar_meta,
+          locale: Locale.current_locale,
+          calendar_option: options[:calendar],
+          from_option: options[:from],
+          in_option: options[:in],
+          free_before: slot_cfg["free_before"],
+          free_after: slot_cfg["free_after"]
+        )
+      when "text"
+        puts SlotFormatter.format_header(
+          from: time_min,
+          to: time_max,
+          duration: duration_value,
+          calendars: calendar_meta,
+          count: slot_count,
+          template: template_name
+        )
+        puts ""
+        output = SlotFormatter.format_output(slots_by_day)
+        if output.empty?
+          puts Locale.t("slots.no_available")
+        else
+          puts output
+          copy_slots_to_clipboard(output)
+        end
       else
-        puts output
-        copy_slots_to_clipboard(output)
+        puts "Error: Unsupported format #{format.inspect}. Available: text, json"
+        exit 1
       end
     end
 

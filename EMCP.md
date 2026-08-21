@@ -76,7 +76,7 @@ Expose non-interactive, read-only tools. Prefer `--format json` for structured M
 | MCP tool (suggested) | CLI | Notes |
 | --- | --- | --- |
 | `flycal_search` | `flycal search … --format json` | Primary |
-| `flycal_slots` | `flycal slots …` | Free ranges; clipboard side-effect on host is OK to ignore |
+| `flycal_slots` | `flycal slots … --format json` | Free ranges |
 | `flycal_calendars` | `flycal calendars` | Name + id lines |
 | `flycal_version` | `flycal version` | Health check |
 
@@ -213,9 +213,29 @@ Lists `name id` (one per line). Use to populate calendar pickers / resolve names
 
 Finds continuous free ranges using `slots.templates` in config (`work`, `dinner`, …), `free_before` / `free_after`, and busy calendars from `slots.exclude_calendars` (fallback `calendar_default`).
 
-Key flags: `--duration`, `--from`, `--in`, `--template` / `-T`, `--calendar`.
+Key flags: `--duration`, `--from`, `--in`, `--template` / `-T`, `--calendar`, `--format text|json`.
 
-Output is text-oriented (header + availability). Prefer documenting text parsing or extend flycal later with `--format json` for slots if EmCP needs structured slots.
+**JSON** (`--format json`):
+
+```json
+{
+  "params": { "command": "slots", "from": "…", "to": "…", "duration": "45min", "template": "work", "…" },
+  "info": { "slots_found": 3, "calendars": [{ "id": "…", "name": "…" }], "link": "https://calendar.google.com/…" },
+  "items": [
+    {
+      "date": "2026-03-02",
+      "start": { "dateTime": "2026-03-02T09:00:00+01:00" },
+      "end": { "dateTime": "2026-03-02T12:00:00+01:00" },
+      "duration_seconds": 10800
+    }
+  ],
+  "groups": [
+    { "type": "day", "key": "2026-03-02", "date": "2026-03-02", "from": "…", "to": "…", "items": [ /* same shape */ ] }
+  ]
+}
+```
+
+Datetimes are Google-style ISO-8601. Text mode still prints the human header + ranges and may copy availability to the clipboard; JSON mode does not copy to clipboard.
 
 ### `flycal version`
 
@@ -295,7 +315,6 @@ Auth form pattern (Mode A):
 ## 12. Out of scope for this brief (future)
 
 - Mode B multi-user Google OAuth (web redirect, per-user token stores)
-- JSON renderer for `slots`
 - Invoking flycal as an in-process Ruby library instead of CLI (possible later; today EmCP should treat it as a binary)
 
 When in doubt, read `mcp/tools.json` and run:
