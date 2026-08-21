@@ -144,6 +144,7 @@ flycal config
 | `--description` / `-d` | — | Contains filter on title/description |
 | `--calendar` / `-c` | `calendar_default` | Name or ID |
 | `--locale` | config / `en` | `en` or `it` |
+| `--format` | `text` | Output format (`text`; `json` coming soon) |
 
 Relative dates work in English and Italian: `today`/`oggi`, `tomorrow`/`domani`, `monday`/`lunedi`, `next monday`/`prossimo lunedi`, `last friday`/`scorso venerdi`.
 

@@ -4,6 +4,8 @@
 
 ### Added
 
+- Search pipeline layers: `Retriever` → `Aggregator` → `Renderer` (`TextRenderer`); shared `Params` object across the pipeline
+- Global `--format` option (default `text`; `json` reserved for a future renderer)
 - `mcp/tools.json` machine-readable catalog of CLI commands for MCP servers (schemas, argv templates, auth/interactivity flags)
 - `flycal config` interactive menu to set `calendar_default`, `exclude_calendars`, or open `~/.flycal/config.yml` with `$EDITOR`
 - `slots.exclude_calendars` in config: events from these calendars block free slots; if empty, falls back to `calendar_default`

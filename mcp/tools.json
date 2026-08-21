@@ -358,7 +358,8 @@
           "to": ["--to", "{value}"],
           "in": ["--in", "{value}"],
           "description": ["--description", "{value}"],
-          "locale": ["--locale", "{value}"]
+          "locale": ["--locale", "{value}"],
+          "format": ["--format", "{value}"]
         },
         "examples": [
           ["flycal", "search"],
@@ -410,6 +411,14 @@
           "enum": ["en", "it"],
           "required": false,
           "description": "Optional locale override."
+        },
+        "format": {
+          "cli": ["--format"],
+          "type": "string",
+          "enum": ["text"],
+          "required": false,
+          "default": "text",
+          "description": "Output format. Currently only text; json planned."
         }
       },
       "inputSchema": {
@@ -440,6 +449,11 @@
             "type": "string",
             "enum": ["en", "it"],
             "description": "--locale. Optional locale override (en, it)."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["text"],
+            "description": "--format. Output format (default: text). json coming soon."
           }
         }
       }
