@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- JSON group `from`/`to` use Google-style ISO-8601 (`2026-07-29T14:41:00+00:00`) instead of `YYYYMMDDTHHMMSS`
+
 ## [0.7.8] - 2026-08-21
 
 ### Changed
@@ -14,7 +18,7 @@
 
 - `--description` OR terms with `|` (case-insensitive)
 - `--groupBy day|week|month|description` to override auto grouping
-- JSON group fields: `from`/`to` as `YYYYMMDDTHHMMSS` (time groups); `description` for description groups
+- JSON group fields: `from`/`to` as ISO-8601 (time groups); `description` for description groups
 
 ## [0.7.6] - 2026-08-21
 

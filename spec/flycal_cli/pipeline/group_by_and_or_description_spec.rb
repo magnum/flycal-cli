@@ -113,7 +113,7 @@ RSpec.describe "OR description filter and groupBy overrides" do
     expect(params[:group_by]).to eq("string")
   end
 
-  it "formats day/week/month group from/to as YYYYMMDDTHHMMSS without string key" do
+  it "formats day/week/month group from/to as Google ISO-8601 without string key" do
     config = mock_config(
       mockEventCount: 10,
       mockEventFrom: "2026-01-01",
@@ -130,8 +130,8 @@ RSpec.describe "OR description filter and groupBy overrides" do
     data = JSON.parse(output)
     group = data["groups"].first
 
-    expect(group["from"]).to match(/\A\d{8}T\d{6}\z/)
-    expect(group["to"]).to match(/\A\d{8}T\d{6}\z/)
+    expect(group["from"]).to match(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
+    expect(group["to"]).to match(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
     expect(group).not_to have_key("string")
   end
 

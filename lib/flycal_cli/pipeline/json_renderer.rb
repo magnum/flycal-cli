@@ -75,8 +75,8 @@ module FlycalCli
             if type == "string"
               g["string"] = group[:string] || group[:key]
             else
-              g["from"] = format_group_boundary(group[:start_at])
-              g["to"] = format_group_boundary(group[:end_at])
+              g["from"] = format_time(group[:start_at])
+              g["to"] = format_time(group[:end_at])
             end
             g["month_name"] = group[:month_name] if group[:month_name]
           end
@@ -118,19 +118,12 @@ module FlycalCli
         end
       end
 
+      # Google Calendar-style ISO-8601 datetime, e.g. 2026-07-29T14:41:00+00:00
       def format_time(value)
         return nil if value.nil?
         return value.iso8601 if value.respond_to?(:iso8601)
 
         value.to_s
-      end
-
-      # Compact local datetime used on group boundaries: YYYYMMDDTHHMMSS
-      def format_group_boundary(value)
-        return nil if value.nil?
-
-        t = value.respond_to?(:to_time) ? value.to_time : value
-        t.strftime("%Y%m%dT%H%M%S")
       end
 
       def blank_to_nil(value)
