@@ -121,20 +121,52 @@ module FlycalCli
                           Format: 30days, 48hours, 2months, 1year (no space).
                           With space use quotes: --in "30 days"
 
+      Mock mode (no Google API; triggered by --mockCalendar or --mockTemplate):
+        --mockTemplate NAME   Load defaults from mocks/ or mockTemplates/NAME.json
+        --mockCalendar NAME   Mock calendar id/name (required here or in template)
+        --mockSeed N          Reproducible random distribution
+        --mockEventCount N
+        --mockEventFrom/--mockEventTo
+        --mockEventDescriptionPatterns a,b,c
+        --mockEventDurationMin/--mockEventDurationMax
+        --mockEventHoursFrom/--mockEventHoursTo
+
       Examples:
         flycal search
         flycal search --in 30days -d placeholder
         flycal search -i 1months --description placeholder
         flycal search -f 2025-03-01 --in 2months
+        flycal search --mockTemplate mock1 --description work --calendar mock1
     LONGDESC
     option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"
     option :from, type: :string, aliases: "-f", desc: "Start (default: today midnight)"
     option :to, type: :string, aliases: "-t", desc: "End (default: 23:59 of day 30)"
     option :in, type: :string, aliases: "-i", desc: "Duration: 30days, 48hours, 2months, 1year (overrides --to)"
     option :description, type: :string, aliases: "-d", desc: "Filter by text in event"
+    option :mockTemplate, type: :string, desc: "Load mock defaults from mocks/<name>.json"
+    option :mockCalendar, type: :string, desc: "Use a generated mock calendar (skips Google API)"
+    option :mockSeed, type: :numeric, desc: "Seed for reproducible mock events"
+    option :mockEventDescriptionPatterns, type: :string, desc: "Comma-separated title patterns (e.g. work,personal)"
+    option :mockEventCount, type: :numeric, desc: "Number of mock events to generate"
+    option :mockEventFrom, type: :string, desc: "Mock events start date"
+    option :mockEventTo, type: :string, desc: "Mock events end date"
+    option :mockEventDurationMin, type: :string, desc: "Min mock event duration (e.g. 4h)"
+    option :mockEventDurationMax, type: :string, desc: "Max mock event duration (e.g. 4h)"
+    option :mockEventHoursFrom, type: :string, desc: "Daily start window for mock events (HH:MM)"
+    option :mockEventHoursTo, type: :string, desc: "Daily end window for mock events (HH:MM)"
     def search
       apply_locale_override
-      unless Auth.logged_in?
+
+      mock_mode = Mock::Config.enabled?(options)
+      mock_config = nil
+      if mock_mode
+        begin
+          mock_config = Mock::Config.from_options(options)
+        rescue FlycalCli::Error => e
+          puts "Error: #{e.message}"
+          exit 1
+        end
+      elsif !Auth.logged_in?
         puts "You are not connected. Run 'flycal login' first."
         exit 1
       end
@@ -156,10 +188,19 @@ module FlycalCli
         exit 1
       end
 
-      creds = Auth.credentials
-      service = CalendarService.new(creds)
+      service =
+        if mock_config
+          Mock::CalendarService.new(mock_config)
+        else
+          CalendarService.new(Auth.credentials)
+        end
 
-      calendar_ids = resolve_calendar_ids(service, options[:calendar])
+      calendar_ids =
+        if mock_config && options[:calendar].to_s.empty?
+          [mock_config.calendar_name]
+        else
+          resolve_calendar_ids(service, options[:calendar])
+        end
       if calendar_ids.empty?
         puts "No calendars found."
         exit 1
@@ -175,7 +216,11 @@ module FlycalCli
         to_option: options[:to],
         in_option: options[:in],
         format: options[:format] || "text",
-        locale: Locale.current_locale
+        locale: Locale.current_locale,
+        use_mock: !mock_config.nil?,
+        mock_seed: mock_config&.seed,
+        mock_calendar: mock_config&.calendar_name,
+        mock_template: mock_config&.template_name
       )
 
       begin

@@ -1,0 +1,11 @@
+{
+  "mockCalendar": "mock1",
+  "mockEventDescriptionPatterns": "work,personal,event",
+  "mockEventCount": 100,
+  "mockEventFrom": "2026-01-01",
+  "mockEventTo": "2026-01-31",
+  "mockEventDurationMin": "4h",
+  "mockEventDurationMax": "4h",
+  "mockEventHoursFrom": "09:00",
+  "mockEventHoursTo": "17:00"
+}

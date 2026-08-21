@@ -40,6 +40,7 @@ module FlycalCli
         lines << "From: #{from_str} | To: #{to_str}"
         lines << "Events found: #{totals[:event_count]}"
         lines << "Total time occupied: #{format_duration(totals[:total_minutes].to_f)}"
+        lines << "Mock seed: #{params[:mock_seed]}" if params[:use_mock] && !params[:mock_seed].nil?
 
         case params[:group_by]
         when "week"

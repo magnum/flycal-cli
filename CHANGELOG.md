@@ -4,6 +4,13 @@
 
 ### Added
 
+- Mock calendars for `flycal search`: `--mockCalendar` / `--mockTemplate` (JSON under `mocks/` or `mockTemplates/`), seeded via `--mockSeed` (printed in text summary)
+
+## [0.7.5] - 2026-08-21
+
+### Added
+
+- Mock calendars for `flycal search` (templates, seed, no Google API in mock mode)
 - Search pipeline layers: `Retriever` → `Aggregator` → `Renderer` (`TextRenderer`); shared `Params` object across the pipeline
 - Global `--format` option (default `text`; `json` reserved for a future renderer)
 - `mcp/tools.json` machine-readable catalog of CLI commands for MCP servers (schemas, argv templates, auth/interactivity flags)

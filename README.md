@@ -145,6 +145,11 @@ flycal config
 | `--calendar` / `-c` | `calendar_default` | Name or ID |
 | `--locale` | config / `en` | `en` or `it` |
 | `--format` | `text` | Output format (`text`; `json` coming soon) |
+| `--mockTemplate` | — | Load mock defaults from `mocks/` or `mockTemplates/<name>.json` (no Google API) |
+| `--mockCalendar` | from template | Generated mock calendar name/id (required in template or CLI) |
+| `--mockSeed` | random | Reproducible mock distribution (printed in summary) |
+
+Mock templates live in `mocks/` or `mockTemplates/` (example: `mock1.json` with `mockCalendar`). CLI mock flags override template values. Search `--from` / `--to` keep the normal defaults (today → +30 days), independent of the mock generation window.
 
 Relative dates work in English and Italian: `today`/`oggi`, `tomorrow`/`domani`, `monday`/`lunedi`, `next monday`/`prossimo lunedi`, `last friday`/`scorso venerdi`.
 
