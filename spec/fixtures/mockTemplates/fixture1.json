@@ -1,0 +1,12 @@
+{
+  "mockCalendar": "fixture_cal",
+  "mockEventDescriptionPatterns": "alpha,beta",
+  "mockEventCount": 6,
+  "mockEventFrom": "2026-03-01",
+  "mockEventTo": "2026-03-07",
+  "mockEventDurationMin": "2h",
+  "mockEventDurationMax": "2h",
+  "mockEventHoursFrom": "10:00",
+  "mockEventHoursTo": "16:00",
+  "mockSeed": 99
+}

@@ -4,7 +4,7 @@
 
 ### Added
 
-- Mock calendars for `flycal search`: `--mockCalendar` / `--mockTemplate` (JSON under `mocks/` or `mockTemplates/`), seeded via `--mockSeed` (printed in text summary)
+- RSpec suite for mock calendars, search filtering, and TextRenderer output (`bundle exec rspec`)
 
 ## [0.7.5] - 2026-08-21
 
