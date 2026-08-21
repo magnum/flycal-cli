@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module FlycalCli
-  # Shared helpers for --description filtering and --groupBy description.
+  # Shared helpers for --description filtering and --groupBy string patterns.
   #
-  # OR terms are separated by "|" (also "," for grouping convenience).
+  # OR / group terms are separated by "|" (also ",").
   # Matching is case-insensitive against event summary and description.
   module DescriptionQuery
     module_function

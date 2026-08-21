@@ -52,21 +52,21 @@ module FlycalCli
           lines << "By month:"
           lines.concat(month_group_lines(params[:groups]))
         when "day"
-          if explicit_group_by?(params, "day")
+          if explicit_time_group_by?(params, "day")
             lines << ""
             lines << "By day:"
             lines.concat(day_group_lines(params[:groups]))
           end
-        when "description"
+        when "string"
           lines << ""
-          lines << "By description:"
-          lines.concat(description_group_lines(params[:groups]))
+          lines << "By string:"
+          lines.concat(string_group_lines(params[:groups]))
         end
 
         lines
       end
 
-      def explicit_group_by?(params, value)
+      def explicit_time_group_by?(params, value)
         params[:group_by_option].to_s.strip.downcase == value
       end
 
@@ -93,9 +93,9 @@ module FlycalCli
         end
       end
 
-      def description_group_lines(groups)
+      def string_group_lines(groups)
         Array(groups).map do |g|
-          label = g[:description] || g[:key]
+          label = g[:string] || g[:key]
           "  #{bold(g[:index])}. #{label}: #{g[:event_count]} events, #{format_hours_and_days(g[:hours], g[:working_days])}"
         end
       end

@@ -14,10 +14,10 @@ module FlycalCli
     #   month — timeframe > 30 days
     #
     # Override with params[:group_by_option] / --groupBy:
-    #   day | week | month | description
+    #   day | week | month | <any other string> (split on | for string grouping)
     class Aggregator
       HOURS_PER_WORKING_DAY = 8
-      ALLOWED_GROUP_BY = %w[day week month description].freeze
+      TIME_GROUP_BY = %w[day week month].freeze
 
       def call(params)
         time_min = params[:time_min]
@@ -49,7 +49,7 @@ module FlycalCli
           case group_by
           when "week" then weekly_groups(events, ranges, time_min, time_max)
           when "month" then monthly_groups(events, ranges, time_min, time_max)
-          when "description" then description_groups(events, params[:description])
+          when "string" then string_groups(events, params[:group_by_option])
           else daily_groups(events, ranges, time_min, time_max)
           end
 
@@ -57,21 +57,18 @@ module FlycalCli
       end
 
       def self.resolve_group_by(timeframe_days, explicit = nil)
-        key = explicit.to_s.strip.downcase
-        unless key.empty?
-          unless ALLOWED_GROUP_BY.include?(key)
-            raise FlycalCli::Error,
-                  "Unsupported groupBy #{explicit.inspect}. Available: #{ALLOWED_GROUP_BY.join(", ")}"
+        raw = explicit.to_s.strip
+        if raw.empty?
+          if timeframe_days > 30
+            "month"
+          elsif timeframe_days > 7
+            "week"
+          else
+            "day"
           end
-          return key
-        end
-
-        if timeframe_days > 30
-          "month"
-        elsif timeframe_days > 7
-          "week"
         else
-          "day"
+          key = raw.downcase
+          TIME_GROUP_BY.include?(key) ? key : "string"
         end
       end
 
@@ -163,11 +160,11 @@ module FlycalCli
         groups
       end
 
-      def description_groups(events, description_query)
-        patterns = DescriptionQuery.patterns(description_query)
+      def string_groups(events, group_by_string)
+        patterns = DescriptionQuery.patterns(group_by_string)
         if patterns.empty?
           raise FlycalCli::Error,
-                "groupBy description requires --description with at least one term (e.g. rui|solver)."
+                "groupBy string requires at least one term (e.g. --groupBy \"rui|solver\")."
         end
 
         patterns.each_with_index.map do |pattern, idx|
@@ -183,13 +180,13 @@ module FlycalCli
             period_label_end: nil,
             total_minutes: minutes,
             events: matched,
-            description: pattern
+            string: pattern
           )
         end
       end
 
       def build_group(index:, key:, start_at:, end_at:, period_label_end:, total_minutes:, events:,
-                      month_name: nil, description: nil)
+                      month_name: nil, string: nil)
         {
           index: index,
           key: key,
@@ -197,7 +194,7 @@ module FlycalCli
           end_at: end_at,
           period_label_end: period_label_end,
           month_name: month_name,
-          description: description,
+          string: string,
           event_count: events.size,
           total_minutes: total_minutes,
           hours: (total_minutes / 60.0).round(1),

@@ -137,7 +137,7 @@ module FlycalCli
         flycal search -i 1months --description placeholder
         flycal search -f 2025-03-01 --in 2months
         flycal search --mockTemplate mock1 --description work --calendar mock1
-        flycal search -d "rui|solver" --groupBy description --format json
+        flycal search --groupBy "rui|solver" --format json
     LONGDESC
     option :calendar, type: :string, aliases: "-c", desc: "Calendar name or ID"
     option :from, type: :string, aliases: "-f", desc: "Start (default: today midnight)"
@@ -146,7 +146,7 @@ module FlycalCli
     option :description, type: :string, aliases: "-d",
            desc: "Filter text in event (OR with |, e.g. rui|solver)"
     option :groupBy, type: :string,
-           desc: "Grouping: day, week, month, or description (default: auto from timeframe)"
+           desc: "Grouping: day, week, month, or a string like rui|solver (default: auto from timeframe)"
     option :mockTemplate, type: :string, desc: "Load mock defaults from mocks/<name>.json"
     option :mockCalendar, type: :string, desc: "Use a generated mock calendar (skips Google API)"
     option :mockSeed, type: :numeric, desc: "Seed for reproducible mock events"

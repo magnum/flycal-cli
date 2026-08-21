@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-08-21
+
+### Changed
+
+- `--groupBy` string mode: any value other than `day`/`week`/`month` is split on `|` for grouping (independent from `--description`)
+
 ## [0.7.7] - 2026-08-21
 
 ### Added

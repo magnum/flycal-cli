@@ -55,7 +55,7 @@ RSpec.describe "OR description filter and groupBy overrides" do
     expect(params[:groups].first[:key]).to match(/\A2026-01-01\z/)
   end
 
-  it "groups by description terms from --description" do
+  it "treats non day/week/month groupBy values as string patterns" do
     config = mock_config(
       mockEventCount: 45,
       mockEventFrom: "2026-01-01",
@@ -67,24 +67,53 @@ RSpec.describe "OR description filter and groupBy overrides" do
       config: config,
       time_min: Time.new(2026, 1, 1),
       time_max: Time.new(2026, 1, 31, 23, 59, 59),
-      description: "work|personal",
-      group_by: "description",
+      description: nil,
+      group_by: "work|personal",
       format: "json"
     )
     data = JSON.parse(output)
 
-    expect(params[:group_by]).to eq("description")
+    expect(params[:group_by]).to eq("string")
+    expect(data["params"]["group_by"]).to eq("string")
+    expect(data["params"]["group_by_option"]).to eq("work|personal")
     expect(data["groups"].size).to eq(2)
-    expect(data["groups"].map { |g| g["description"] }).to eq(%w[work personal])
-    expect(data["groups"]).to all(include("type" => "description"))
+    expect(data["groups"].map { |g| g["string"] }).to eq(%w[work personal])
+    expect(data["groups"]).to all(include("type" => "string"))
     data["groups"].each do |group|
       expect(group).not_to have_key("from")
       expect(group).not_to have_key("to")
-      expect(group["items"]).to all(satisfy { |ev| ev["summary"].downcase.include?(group["description"]) })
+      expect(group).not_to have_key("description")
+      expect(group["items"]).to all(satisfy { |ev| ev["summary"].downcase.include?(group["string"]) })
     end
   end
 
-  it "formats day/week/month group from/to as YYYYMMDDTHHMMSS without description key" do
+  it "keeps --description filter independent from --groupBy string" do
+    config = mock_config(
+      mockEventCount: 45,
+      mockEventFrom: "2026-01-01",
+      mockEventTo: "2026-01-31",
+      mockEventDescriptionPatterns: "work,personal,event",
+      mockSeed: 8
+    )
+    params, output = run_search_pipeline(
+      config: config,
+      time_min: Time.new(2026, 1, 1),
+      time_max: Time.new(2026, 1, 31, 23, 59, 59),
+      description: "work",
+      group_by: "work|personal",
+      format: "json"
+    )
+    data = JSON.parse(output)
+
+    expect(data["items"].map { |e| e["summary"] }).to all(match(/work/i))
+    personal_group = data["groups"].find { |g| g["string"] == "personal" }
+    expect(personal_group["items"]).to be_empty
+    work_group = data["groups"].find { |g| g["string"] == "work" }
+    expect(work_group["items"]).not_to be_empty
+    expect(params[:group_by]).to eq("string")
+  end
+
+  it "formats day/week/month group from/to as YYYYMMDDTHHMMSS without string key" do
     config = mock_config(
       mockEventCount: 10,
       mockEventFrom: "2026-01-01",
@@ -103,12 +132,12 @@ RSpec.describe "OR description filter and groupBy overrides" do
 
     expect(group["from"]).to match(/\A\d{8}T\d{6}\z/)
     expect(group["to"]).to match(/\A\d{8}T\d{6}\z/)
-    expect(group).not_to have_key("description")
+    expect(group).not_to have_key("string")
   end
 
-  it "rejects invalid groupBy values" do
-    expect do
-      FlycalCli::Pipeline::Aggregator.resolve_group_by(10, "hours")
-    end.to raise_error(FlycalCli::Error, /Unsupported groupBy/)
+  it "resolves unknown groupBy shortcuts as string mode" do
+    expect(FlycalCli::Pipeline::Aggregator.resolve_group_by(10, "rui|solver")).to eq("string")
+    expect(FlycalCli::Pipeline::Aggregator.resolve_group_by(40, "day")).to eq("day")
+    expect(FlycalCli::Pipeline::Aggregator.resolve_group_by(40, nil)).to eq("month")
   end
 end

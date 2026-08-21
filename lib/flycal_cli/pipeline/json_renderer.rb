@@ -72,8 +72,8 @@ module FlycalCli
             "events_found" => group[:event_count] || Array(group[:events]).size,
             "items" => Array(group[:events]).map { |ev| serialize_event(ev) }
           }.tap do |g|
-            if type == "description"
-              g["description"] = group[:description] || group[:key]
+            if type == "string"
+              g["string"] = group[:string] || group[:key]
             else
               g["from"] = format_group_boundary(group[:start_at])
               g["to"] = format_group_boundary(group[:end_at])
